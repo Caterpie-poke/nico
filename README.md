@@ -1,2 +1,2 @@
-# pegpy
-Nez Parser for Python
+# Nico
+Nihongo contract
