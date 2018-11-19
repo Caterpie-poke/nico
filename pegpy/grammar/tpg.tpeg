@@ -1,0 +1,63 @@
+Source
+    = jjj
+
+/*
+実行者の投票者情報の委任先の残高
+（（「実行者」の投票者情報）の「委任先」）の残高
+balanceOf[ voterDataOf[msg.sender].delegate ]
+
+Input = Map
+Map = Structの残高
+Struct = Map の Word
+Map = Wordの投票者情報
+*/
+
+Map
+    = (Struct/Word) の残高
+    / (Struct/Word) の投票者情報
+Struct
+    = (Map/Array/Word) (の Word)*
+Map
+    = Struct のデータ
+
+
+Source2
+    = {('あいうえお')+ #Input0}
+    / {[ぁ-ん] #Input1}
+    / {'あ' #Input2}
+    / {'ab' #Input3}
+    / {($Hello)+ #Input4}
+    / {($AnyChar)+ #Input5}
+    / {(!'[' !']' !S .)* #Input6}
+    / {.* #Input7}
+
+Hello
+    = {'こんにちは' / 'はろー' #HELLO}
+
+AnyChar
+    = {'か' / 'きき' #ANY}
+
+
+
+/*--------------------------------------------------*/
+_            = ( S / BLOCKCOMMENT / LINECOMMENT )*
+__           = ( S / BLOCKCOMMENT / LINECOMMENT )+
+S            = [ \t\n\r]
+BLOCKCOMMENT = '/*' ( !'*/' . )* '*/'
+             / '(*' ( !'*)' . )* '*)'
+LINECOMMENT  = '//' ( !EOL . )* EOL
+EOF          = !.
+EOL          = ('\r'? '\n') / EOF
+/*--------------------------------------------------*/
+
+Line
+    = {(!S .)* #Line}
+
+
+/*
+aaaaa
+bbbbb
+ccccc
+
+-> [#Input [#Line 'aaaaa'][#Line 'bbbbb'][#Line 'ccccc']]
+*/

@@ -1,0 +1,180 @@
+Source
+    = 's:' _ {($Expression _)* #Input} EOF
+    / _ {($FunctionDecl _)* #Input} EOF
+
+_            = ( S / BLOCKCOMMENT / LINECOMMENT )*
+__           = ( S / BLOCKCOMMENT / LINECOMMENT )+
+S            = [ \t\n\r]
+BLOCKCOMMENT = '/*' ( !'*/' . )* '*/'
+             / '(*' ( !'*)' . )* '*)'
+LINECOMMENT  = '//' ( !EOL . )* EOL
+EOF          = !.
+EOL          = ('\r'? '\n') / EOF
+
+/*-------------------------PEG Test-------------------------*/
+Tests = FuncDeclBody
+Remain = {(!'fin' .)* #R}
+/*-------------------------FunctionDecl-------------------------*/
+FunctionDecl
+    = {
+    ($FuncDeclParam)? ($Adverb $FuncDeclParam)* $FuncDeclName EOL
+    ($FuncDeclBody)?
+    'fin'
+    #FDecl}
+FuncDeclParam
+    = {$Word #FDParam}
+FuncDeclName
+    = {(!'tosuru' (!'[' !']' !S .)+) #FDName}
+FuncDeclBody
+    = _ {($Statement _)+ #FDBody}
+
+/*----------TEMP----------*/
+Help2
+    = FunctionExpression2
+FunctionExpression2
+    = {
+    ($FuncExprParam2)? ($Adverb2 $FuncExprParam2)* $FuncExprName2
+    #FExpr}
+Adverb2
+    = {('ha'/'ga'/'ni'/'to'/'kara'/'he'/'wo'/'niyotte') #Adv}
+FuncExprParam2
+    = {$PostfixExpr #FEParam}
+FuncExprName2
+    = {(!'tosuru' !'ban' !'fin' (!'[' !']' !S .)+) #FEName}
+
+Help
+    = ReturnStatement
+    / RequireStatement
+    / EventStatement
+    / IfStatement
+    / Assign
+    / LogicalExpr
+    /// FunctionExpression
+/*----------TEMP----------*/
+
+
+/*-------------------------Statement-------------------------*/
+Statement
+    = ReturnStatement
+    / RequireStatement
+    / EventStatement
+    / IfStatement
+    / Assign
+    / Expression
+
+ReturnStatement
+    = {
+    'output' EOL
+    ([ \t]* $PostfixExpr EOL)+
+    #Return
+    }
+
+RequireStatement
+    = {
+    'requirement' EOL
+    ([ \t]* $Expression EOL)+
+    #Require
+    }
+
+EventStatement
+    = {
+    $Word 'toshite,logworecord' EOL
+    (_ '|' $Expression EOL)+
+    #Event
+    }
+
+IfStatement
+    = {
+    'mosi' _ $Condition _ 'naraba' $Then
+    ($ElseIf)*
+    'denakereba' $Else
+    #If}
+Condition
+    = {$Expression #Cond}
+Then
+    = {EOL (_ '|' $Statement EOL)* #Then}
+    / {',' _ $Statement EOL #Then}
+ElseIf
+    = {
+    'dehanaku,mosi' _ $Condition _ 'naraba' $Then
+    #ElIf
+    }
+Else
+    = {EOL (_ '|' $Statement EOL)* #Else}
+    / {',' _ $Statement EOL #Else}
+
+Assign
+    = {$PostfixExpr 'ha' $Expression ('tosuru')? #Assign}
+    / {$PostfixExpr 'wo' $Expression 'tosuru' #Assign}
+
+/*-------------------------Expression-------------------------*/
+Expression
+    = LogicalExpr
+
+LogicalExpr
+    = {$EqualityExpr ($({'AND'#AND}/{'OR'#OR}) $EqualityExpr)* #Logical}
+
+EqualityExpr
+    = {$RelationalExpr ($({'='#EQ}/{'NOT='#NEQ}) $RelationalExpr)* #Equality}
+
+RelationalExpr
+    = {$AddSubExpr ($CMPR $AddSubExpr)* #Relational}
+CMPR
+    = {'>='#GTE}
+    / {'<='#LTE}
+    / {'>'#GT}
+    / {'<'#LT}
+
+AddSubExpr
+    = {$MulDivExpr ($({'+'#ADD}/{'-'#SUB}) $MulDivExpr)* #AddSub}
+MulDivExpr
+    = {$SemiExpr ($({'*'#MUL}/{'/'#DIV}) $SemiExpr)* #MulDiv}
+
+SemiExpr
+    = FunctionExpression
+    / PostfixExpr
+
+FunctionExpression
+    = {
+    ($FuncExprParam)? ($Adverb $FuncExprParam)* $FuncExprName
+    #FExpr}
+Adverb
+    = {('ha'/'ga'/'ni'/'to'/'kara'/'he'/'wo'/'niyotte') #Adv}
+FuncExprParam
+    = {$PostfixExpr #FEParam}
+FuncExprName
+    = {!'tosuru' ![0-9] !'ban' !'fin' (!'[' !']' !S .)+ #FEName}
+
+
+PostfixExpr
+    = MapRef
+    / StructRef
+    / PrimaryExpr
+
+MapRef
+    = {$Word 'noVoterData' #Map00}
+    / {$Word 'ga' $Word 'karaCanMoveAmount' #Map01}
+    / {$Word 'noBalance' #Map02}
+
+StructRef
+    = {$StructComponent ('no' $StructComponent)* #StructRef}
+StructComponent
+    = ArrayRef
+    / Word
+
+ArrayRef
+     = {$Word ('no' $Index 'ban')+ #ArrayRef}
+Index
+    = {$Num #Index}
+
+PrimaryExpr
+    = Num
+    / Word
+
+Num
+    = {[0-9]+ #Int}
+
+Word
+    = '[' Identifier ']'
+Identifier
+    = {(!'[' !']' .)+ #Word}

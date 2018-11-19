@@ -1,0 +1,18 @@
+//Source = {$Statement #Input}
+Source = {($NotStartW)+ #Input}
+NotStartW = {!'W' . #C}
+
+/*
+Test
+「あいう」-> [#Input [#C 'あ'] [#C 'い'] [#C 'う']]
+「あ」 -> [#err '']
+*/
+
+Statement
+    = BracketWord
+    / InnerWord
+
+BracketWord = '[' InnerWord ']'
+
+InnerWord = {(!']' .)+ #Word}
+

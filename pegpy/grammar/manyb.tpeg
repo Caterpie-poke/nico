@@ -1,0 +1,8 @@
+
+S = { $({'b' #B1}) $S $S / $S1 #S1 }
+S1 = { $({'b' #B2}) $S / 'b' #S2 }
+
+example S bb
+example S bbb
+example S bbbb
+
