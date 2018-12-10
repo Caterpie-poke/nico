@@ -1,23 +1,23 @@
 #!/usr/local/bin/python
-import sys, time #,readline*
+import sys, time, readline, subprocess
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from pegpy.peg import *
-from pegpy.gparser.gnez import nnez
+from pegpy.gparser.gnez import gnez
 import pegpy.utils as u
-from pegpy.my_eval import *
 
 def bold(s):
     return '\033[1m' + str(s) + '\033[0m'
 
 def read_inputs(a):
-    try:
-        f = open(a, 'rb')
+    path = Path(a)
+    if path.exists():
+        f = path.open()
         data = f.read()
         f.close()
         return data
-    except:
-        return a.encode()
+    else:
+        return a
 
 def readlines(prompt):
     s = input(prompt)
@@ -35,34 +35,31 @@ def readlines(prompt):
 
 def load_grammar(opt, default = None):
     file = default if not 'grammar' in opt else opt['grammar']
-    #file = 'hoge.tpeg'
     if file is None:
         raise CommandError(opt)
     g = Grammar(file)
-    g.load(u.find_path(file))
+    g.load(file)
     return g
 
 def switch_generator(opt, default = 'math.tpeg'):
     file = default if not 'grammar' in opt else opt['grammar']
     if file.endswith('.gpeg'):
-        return nnez
+        return gnez
     return nez
 
 def parse(opt, conv=None):
     g = load_grammar(opt)
-    #g = Grammar(hoge).load('hoge.tpeg')
-    parser = switch_generator(opt)(g)
-    #parser = nez(g)
+    parser = switch_generator(opt)(g, conv)
     inputs = opt['inputs']
     if len(inputs) == 0:
         try:
             while True:
                 s = readlines(bold('>>> '))
-                print(repr(parser(s, conv)))
-        except EOFError:
+                print(repr(parser(s)))
+        except (EOFError, KeyboardInterrupt):
             pass
     elif len(inputs) == 1:
-        print(repr(parser(read_inputs(inputs[0]), conv)))
+        print(repr(parser(read_inputs(inputs[0]))))
     else:
         for file in opt['inputs']:
             st = time.time()
@@ -94,7 +91,7 @@ def origami(opt):
                 t = parser(s)
                 print(repr(t))
                 print(repr(transpile(t, origami_files)))
-        except EOFError:
+        except (EOFError, KeyboardInterrupt):
             pass
     else :
         for input in source_files:
@@ -107,42 +104,20 @@ def nezcc(opt):
 def bench(opt):
     pass
 
-def exe(opt, conv=None):
-    # g = load_grammar(opt)
-    g = Grammar('nicon')
-    g.load('nicon_body.tpeg')
-    # parser = switch_generator(opt)(g)
-    parser = nez(g)
-    inputs = opt['inputs']
-    if len(inputs) == 0:
-        try:
-            while True:
-                s = readlines(bold('>>> '))
-                ast = repr(parser(s, conv))
-                print(ast + '\n')
-                output = transpile(ast)
-                print(output)
-        except EOFError:
-            pass
-    elif len(inputs) == 1:
-        ast = repr(parser(read_inputs(inputs[0]), conv))
-        print(ast + '\n')
-        print(transpile(ast))
-    else:
-        for file in opt['inputs']:
-            st = time.time()
-            t = parser(read_inputs(file))
-            et = time.time()
-            print(file, str((et - st) * 1000.0) + "[ms]: ", t.tag)
+def update(opt):
+    try:
+        subprocess.check_call(['pip3', 'install', '-U', 'git+https://github.com/KuramitsuLab/pegpy.git'])
+    except:
+        pass
 
 def parse_opt(argv):
     def parse_each(a, d):
         if a[0].startswith('-'):
             if len(a) > 1:
-                if a[0] == '-g':
+                if a[0] == '-g' or a[0] == '--grammar':
                     d['grammar'] = a[1]
                     return a[2:]
-                elif a[0] == '-s':
+                elif a[0] == '-s' or a[0] == '--start':
                     d['start'] = a[1]
                     return a[2:]
                 elif a[0] == '-X':
@@ -183,6 +158,7 @@ def usage(opt):
     print(" origami    transpiler")
     print(" bench      the bench mark")
     print(" json       output tree as json file")
+    print(" update     update pegpy")
 
 class CommandError(Exception):
     def __init__(self, opt):
@@ -191,16 +167,14 @@ class CommandError(Exception):
 def main():
     try:
         argv = sys.argv
-        #['parse' '-g', 'hoge.tpeg', 'file.txt']
         if len(argv) < 2:
             raise CommandError({})
+
         cmd = argv[1]
         d = parse_opt(argv[2:])
-        #d = {'inputs':'file.txt', 'grammar':'hoge.tpeg'}
         names = globals()
         if cmd in names:
             names[cmd](d)
-            #parse(d)
         else:
             raise CommandError(d)
     except CommandError as e:

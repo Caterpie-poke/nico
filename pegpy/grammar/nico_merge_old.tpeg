@@ -1,0 +1,296 @@
+Source
+    = _ {
+    $Title _
+    (
+        FirstArticle? _ C+ _
+        ($VariableDecl _)*
+        '終了' _
+    )?
+    ($FunctionDecl _)*
+    #Input
+    } EOF
+
+_            = ( S / BLOCKCOMMENT / LINECOMMENT )*
+__           = ( S / BLOCKCOMMENT / LINECOMMENT )+
+S            = [ \t\n\r] / '　'
+BLOCKCOMMENT = '/*' ( !'*/' . )* '*/'
+             / '(*' ( !'*)' . )* '*)'
+LINECOMMENT  = '//' ( !EOL . )* EOL
+EOF          = !.
+EOL          = ('\r'? '\n') / EOF
+
+"," = ',' / '、'
+"(" = '(' / '（'
+")" = ')' / '）'
+"<" = '<' / '＜'
+">" = '>' / '＞'
+"+" = '+' / '＋'
+"-" = '-' / 'ー'
+"*" = '*' / '＊'
+"/" = '/' / '／'
+"=" = '=' / '＝'
+" " = ' ' / '　'
+"@" = '@' / '＠'
+":" = ':' / '：'
+">=" = '>=' / '＞＝'
+"<=" = '<=' / '＜＝'
+"NOT=" = 'NOT=' / 'NOT＝'
+
+C
+    = HIRA
+    / KATA
+    / KANJI
+    / Alphabet
+    / [a-zA-Z0-9]
+
+CC = !S .
+
+HIRA = [ぁ-ん]
+KATA = [ァ-ヶ]
+KANJI = [㐀-䶵一-龠々〇〻]
+Alphabet = [ａ-ｚＡ-Ｚ０-９]
+
+/*-------------------------PreDescription-------------------------*/
+Title
+    = '「' InnerTitle '」'
+InnerTitle
+    = {(!'」' C)+ #Title}
+
+FirstArticle
+    = '第0条'
+Article
+    = '第' Digit '条'
+
+/*-------------------------VariableDecl-------------------------*/
+VariableDecl
+    = {$MapDecl #MDecl}
+    / {$Word #VDecl}
+
+//MapDecl created by dictParse
+MapParam
+    = "(" (!")" C)+ ")"
+    / '〜'
+
+/*-------------------------FunctionDecl-------------------------*/
+FunctionDecl
+    = {
+    Article _ $FuncDeclName _
+    ($FuncDeclInput)? _
+    ($FuncDeclBody)
+    '終了'
+    #FDecl}
+FuncDeclName
+    = {(!'「' !'」' C)+ #FDName}
+FuncDeclInput
+    = {'入力' _ ":" _ $FuncDeclParam (_ "," _ $FuncDeclParam)* #FDInput}
+FuncDeclParam
+    = {$Word #FDParam}
+FuncDeclBody
+    = {($Statement _)+ #FDBody}
+
+/*-------------------------Statement-------------------------*/
+Statement
+    = ReturnStatement
+    / RequireStatement
+    /// EventStatement
+    / IfStatement
+    / Assign
+    / LocalVariableDecl
+    / Expression
+
+ReturnStatement
+    = {'出力' _ ":" _ $PrimaryExpr (_ "," _ $PrimaryExpr)* #Return}
+
+RequireStatement
+    = {
+    '要件' _
+    ($LogicalExpr _)+
+    '終了'
+    #Require
+    }
+
+//Experimental
+EventStatement
+    = {
+    $Word 'として以下を記録' EOL
+    (_ '｜' $Expression EOL)+
+    #Event
+    }
+
+IfStatement
+    = {
+    'もし' _ $Condition _ 'ならば'
+    $Then
+    ($ElseIf)*
+    'でなければ'
+    $Else
+    '終了'
+    #If}
+Condition
+    = {$LogicalExpr #Cond}
+Then
+    = {_ ($Statement _)+ #Then}
+    / {"," $Statement _ #Then}
+ElseIf
+    = {
+    'ではなく、もし' _ $Condition _ 'ならば'
+    $Then
+    #ElIf
+    }
+Else
+    = {_ ($Statement _)+ #Else}
+    / {"," $Statement _ #Else}
+
+Assign
+    = {$AssignLeft _ 'は' _ $Expression (_ 'とする')? #Assign}
+    / {$AssignLeft _ 'を' _ $Expression _ 'とする' #Assign}
+AssignLeft
+    = Tuple
+    / PostfixExpr
+
+//Only used in Assign
+Tuple
+    = {"(" $PrimaryExpr ("," _ $PrimaryExpr)+ ")" #Tuple}
+
+LocalVariableDecl
+    = {($LogicalExpr _ 'として' _)? $Word _ 'をおく' #LocalVDecl}
+
+/*-------------------------Expression-------------------------*/
+Expression
+    = Tuple
+    / FunctionExpression
+    / LogicalExpr
+
+/*-------------------------FunctionExpr-------------------------*/
+FunctionExpression
+    = {
+    ($FuncExprParam (_ "," _ $FuncExprParam)* _ 'に対し' _ )? $FuncExprName _ ('を行う' / 'を行なった結果')
+    #FExpr}
+FuncExprParam
+    = {$PostfixExpr #FEParam}
+FuncExprName
+    = {!Preserved (!'を行う' !'を行なった結果' C)+ #FEName}
+Preserved
+    = 'とする'
+    / 'として'
+    / 'ならば'
+    / 'でなければ'
+    / 'ではなく、もし'
+    / 'の'
+    / ","
+    / '終了'
+    / [0-9]+
+    / "+" / "-" / "*" / "/"
+    / "<" / ">" / "<=" / ">="
+    / "=" / "NOT="
+    / 'かつ'
+    / 'または'
+
+/*-------------------------LogicalExpr-------------------------*/
+LogicalExpr
+    = {$EqualityExpr (_ $({'かつ' #AND}/{'または' #OR}) _ $EqualityExpr)* #Logical}
+
+EqualityExpr
+    = {$RelationalExpr (_ $({"=" #EQ}/{"NOT=" #NEQ}) _ $RelationalExpr)* #Equality}
+
+RelationalExpr
+    = {$AddSubExpr (_ $CMPR _ $AddSubExpr)* #Relational}
+CMPR
+    = {">="#GTE}
+    / {"<="#LTE}
+    / {">"#GT}
+    / {"<"#LT}
+
+AddSubExpr
+    = {$MulDivExpr (_ $({"+" #ADD}/{"-" #SUB}) _ $MulDivExpr)* #AddSub}
+MulDivExpr
+    = {$PostfixExpr (_ $({"*" #MUL}/{"/" #DIV}) _ $PostfixExpr)* #MulDiv}
+
+/*-------------------------PostfixExpr-------------------------*/
+PostfixExpr
+    = StructRef
+    / ArrayRef
+    / MapRef
+    / PrimaryExpr
+
+StructRef
+    = {$StructComponent ('の' $StructComponent)+ #StructRef}
+StructComponent
+    = ArrayRef
+    / MapRef
+    / Word
+
+ArrayRef
+    = {$ArrayComponent ('の' $Index '番目')+ #ArrayRef}
+ArrayComponent
+    = MapRef
+    / Word
+Index
+    = {$(Num / Word) #Index}
+
+PrimaryExpr
+    = Num
+    / Address
+    / Boolean
+    / Word
+
+Num
+    = {Digit #Int}
+Digit
+    = [1-9] [0-9]*
+    / [0]
+
+Address
+    = {"@" '0x' [0-9]+ #Addr}
+
+Boolean
+    = {'はい' #BT}
+    / {'いいえ' #BF}
+
+Word
+    = '「' Identifier '」'
+    / {FromDict #Word}
+Identifier
+    = {(!'「' !'」' C)+ #Word}
+NonTagWord
+    = '「' (!'「' !'」' C)+ '」'
+    / FromDict
+
+MapRef
+    = {$PrimaryExpr 'の投票者情報' #Map0}
+    / {$PrimaryExpr 'が' $PrimaryExpr 'から動かせる金額' #Map1}
+    / {$PrimaryExpr 'の残高' #Map2}
+    / {$PrimaryExpr 'の数字表' #Map3}
+
+MapDecl
+    = {MapParam 'の投票者情報' #DMap0}
+    / {MapParam 'が' MapParam 'から動かせる金額' #DMap1}
+    / {MapParam 'の残高' #DMap2}
+    / {MapParam 'の数字表' #DMap3}
+
+FromDict
+    = '◯×テーブル'
+    / 'クラス名簿'
+    / 'ナンバーズ'
+    / 'Alice'
+    / 'メッセージ'
+    / 'map3'
+    / 'map2'
+    / 'map1'
+    / 'map0'
+    / 'チェック'
+    / '総発行量'
+    / 'Name'
+    / '管理者'
+    / '野菜名'
+    / '指定量'
+    / '創設者'
+    / '送金額'
+    / '対象者'
+    / '実行者'
+    / '単語4'
+    / '単語3'
+    / '単語2'
+    / '単語1'
+    / '数値'
+    / 'ID'

@@ -1,0 +1,79 @@
+＃ユーザ定義
+ほげほげは
+    ID : int
+    Name　：　string
+からなる
+
+
+＃辞書
+単語1：int
+単語2：bool
+単語3：string
+単語4：address
+
+実行者：address
+あなた：address
+送金者：address
+被送金者：address
+指定額：int
+対象者：address
+送金額：int
+総発行量：int
+総発行量の指定値：int
+創設者：address
+指定量：int
+メッセージ：string
+数値　：　int
+野菜名：string
+チェック：bool
+管理者：address
+Alice：生徒情報
+ナンバーズ：intのリスト
+◯×テーブル：boolのリストのリスト
+クラス名簿：生徒情報のリスト
+〜の投票者情報：address->投票者情報
+〜が〜から動かせる金額：address、address->int
+〜から〜が送金可能な金額：address、address->int
+〜の残高：address->int
+〜の数字表：address->intのリスト
+
+
+
+
+/*
+名詞：分類
+初期分類は「int,address,bool,string」の4種
+ここに「追加」が可能
+（追加）学生情報は
+    名前：文字列
+    学年：数値
+    学生番号：アドレス
+からなる
+ボブのデータ：学生情報
+〜の学生情報：アドレス->学生情報
+*/
+
+/*
+DictFile Sample
+
+＃ユーザ定義
+学生情報は
+    名前：文字列
+    ID：数値
+からなる
+
+＃辞書
+名前：string
+数字：int
+対象者：address
+総量：int
+チェック：bool
+生贄：string
+生贄：address #下側の定義で上書きされる
+ナンバーズ：数値のリスト
+名簿：文字列のリスト
+〜の残高：アドレス->数値
+〜が〜から動かせる金額：アドレス、アドレス->数値
+学生リスト：学生情報のリスト
+〜の学生情報：アドレス->学生情報
+*/
