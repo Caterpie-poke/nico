@@ -90,11 +90,7 @@ FunctionDecl
     ($FuncDeclOutput)? _
     '終了'
     #FDecl}
-    / {
-    Article _ SOL _
-    ${(!'終了' .)+} _
-    '終了'
-    #SolBlock}
+    / SolidityBlock
 
 FuncDeclName
     = {$FuncName (_ "(" _ $FuncSolName _ ")")? #FDName}
@@ -131,6 +127,12 @@ FuncDeclOutput
     '終了'
     #FDOutput}
 
+SolidityBlock
+    =
+    Article _ SOL EOL
+    SolBlockInner _
+    '終了'
+
 SOL
     = 'Solidity'
     / 'SOLIDITY'
@@ -139,9 +141,14 @@ SOL
     / 'SOL'
     / 'sol'
 
+SolBlockInner
+    = {(!'終了' .)+ #Sol}
+
+
 /*-------------------------Statement-------------------------*/
 Statement
     = IfStatement
+    / SolidityStatement
     / Assign
     / LocalVariableDecl
     / Expression
@@ -167,6 +174,11 @@ ElseIf
     }
 Else
     = {($Statement _)+ #Else}
+
+SolidityStatement
+    = 'SOL{' SolInner '}'
+SolInner
+    = {(!'}' !EOL .)* #Sol}
 
 Assign
     = {$AssignLeft _ 'は' _ $AssignRight (_ 'とする')? #Assign}

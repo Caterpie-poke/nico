@@ -1,9 +1,7 @@
 Source
     = _ {
-    "#" 'ユーザ定義' _
-    ($UserDefinition _)*
-    "#" '辞書' _
-    ($Dictionary _)*
+    UserDefinition? _
+    WordDefinition? _
     #Input
     } EOF
 
@@ -38,25 +36,25 @@ Any
 HIRA = [ぁ-ん]
 KATA = [ァ-ヶ]
 KANJI = [㐀-䶵一-龠々〇〻]
-MARK = [ー]
+MARK = [ー◯×〜]
 Alphabet = [ａ-ｚＡ-Ｚ０-９]
 
 
 UserDefinition
-    = StructDefine
+    = "#" 'ユーザ定義' _ ($StructDefine _)*
 
 StructDefine
     = {
     $StructName ('は' EOL) _
-    ($StructFactor _)+
+    ($Dictionary _)+
     'からなる'
     #StructDef
     }
 StructName
     = {(!('は' EOL) C)+ #SName}
-StructFactor
-    = {$MapWord _ ":" _ $MapType #SFactor}
-    / {$Word _ ":" _ $Type #SFactor}
+
+WordDefinition
+    = "#" '辞書' _ ($Dictionary _)*
 
 Dictionary
     = {$MapWord _ ":" _ $MapType #Dict}
@@ -81,10 +79,12 @@ MapRetType
     / StructType
 
 ArrayType
-    = {$BaseType (${'のリスト' #B})+ #Array}
+    = {$BaseType ($List)+ #Array}
 BaseType
     = PrimitiveType
     / StructType
+List
+    = {'のリスト' #B}
 
 PrimitiveType
     = {'int' #T}
@@ -93,5 +93,5 @@ PrimitiveType
     / {'string' #T}
 
 StructType
-    = {(!":" !'のリスト' !"->"" C)+ #ST}
+    = {(!":" !'のリスト' !"->" C)+ #ST}
 

@@ -1,8 +1,8 @@
 import sys
-from nico_ast import *
+from nico_ast2 import *
 from nico_utils import *
 
-def transpile(ast,tree):
+def makeSOL(ast,tree):
     ast.setTree(tree)
     (code,tag) = getNode(ast)
     # tagMatch(tag,['Input'])
@@ -28,7 +28,7 @@ def Input(ast):
         ast.next()
         (s,tag) = getNode(ast)
         # tagMatch(tag,['VDecl','FDecl'])
-        if tag == 'FDecl':code+='\n'
+        if tag in ['FDecl','Sol']:code+='\n'
         code += s
     ast.decIndent()
     code += ast.Indent() + '}\n'
@@ -46,14 +46,14 @@ def Title(ast):
 def VDecl(ast):
     vs = []
     code = ''
-    (fv,tag) = getNode(ast)
-    vs.append(fv)
+    ast.back()
     while(ast.current()==' '):
         ast.next()
         (s,tag) = getNode(ast)
         vs.append(s)
     for v in vs:
         code += ast.Indent() + ast.withType(v,'internal') + ';\n'
+        ast.stvar.append(v)
     return code
 
 def DMap(ast,count):
@@ -238,11 +238,38 @@ def Else(ast):
     code+=ast.Indent()+'}'
     return code
 
+def Sol(ast):
+    code = ''
+    ast.requireNext('\'')
+    while(ast.current()!='\'' or ast.string[ast.pos+1]!=']'):
+        code += ast.current()
+        ast.next()
+    ast.next()
+    code = allReplace(ast,code)
+    ast.funcInfo['B'] = ''
+    return code
+
+def allReplace(ast,s):
+    begin = s.find('「')
+    while(begin >= 0):
+        end = s.find('」')
+        before = s[begin+1:end]
+        if before in ast.reserved:
+            after = ast.reserved[before]
+        else:
+            after = 'v_' + strToByte(before)
+        s = s.replace('「'+before+'」', after)
+        begin = s.find('「')
+    return s
+
+
+
+
 def Assign(ast):
     (left,tag) = getNode(ast)
     ast.next()
     (right,tag) = getNode(ast)
-    if ast.inDict(left):
+    if ast.isStateVar(left):
         ast.funcInfo['B'] = ''
     return left+' = '+right
 
@@ -518,7 +545,11 @@ def Id(ast):
         w+=ast.current()
         ast.next()
     ast.next()
-    return 'v_'+strToByte(w)
+    if w in ast.reserved:
+        w = ast.reserved[w]
+    else:
+        w = 'v_'+strToByte(w)
+    return w
 
 def Map(ast,count):
     code = 'map'+count
@@ -564,4 +595,4 @@ s4 = "[#Input [#Title 'テストコントラクト'] [#VDecl [#IDecl [#Id '単�
 s5 = "[#Input [#Title 'テストコントラクト'] [#VDecl [#Id '単語1'] [#Id '単語2'] [#DMap0 '（ほげげ）の投票者情報'] [#DMap3 '〜の残高']] [#FDecl [#FDName [#FName '全部'] [#FSName 'allFDBlock']] [#FDInput [#Id '単語1'] [#Id '単語2']] [#FDRequire [#Logical [#Equality [#Relational [#AddSub [#MulDiv [#String '「こんにちは」']]]] [#EQ '＝'] [#Relational [#AddSub [#MulDiv [#BT 'true']]]]]]] [#FDBody [#LocalVDecl [#Logical [#Equality [#Relational [#AddSub [#MulDiv [#Id '単語1']]]]]] [#Id '単語3']]] [#FDOutput [#Logical [#Equality [#Relational [#AddSub [#MulDiv [#Id '単語4']]]]]]]] [#FDecl [#FDName [#FName 'どうなる'] [#FSName 'transferFrom']] [#FDOutput [#Logical [#Equality [#Relational [#AddSub [#MulDiv [#Int '334']]]]]]]]]"
 s6 = "[#Input [#Title 'ERC20に基づくコインに関する契約'] [#VDecl [#Id '総発行量'] [#DMap3 '（参加者）の残高'] [#DMap2 '（対象者）から（送金者）が送金可能な金額']] [#FDecl [#FDName [#FName '契約の開始'] [#FSName 'constructor']] [#FDInput [#Id '総発行量の指定値']] [#FDBody [#Assign [#Id '総発行量'] [#Logical [#Equality [#Relational [#AddSub [#MulDivExpMod [#Id '総発行量の指定値'] [#MUL '＊'] [#Int '10']]]]]]] [#Assign [#Map3 [#Id 'あなた']] [#Logical [#Equality [#Relational [#AddSub [#MulDivExpMod [#Id '総発行量']]]]]]]]] [#FDecl [#FDName [#FName '総発行量の確認'] [#FSName 'totalSupply']] [#FDOutput [#Logical [#Equality [#Relational [#AddSub [#MulDivExpMod [#Id '総発行量']]]]]]]] [#FDecl [#FDName [#FName '残高の確認'] [#FSName 'balanceOf']] [#FDInput [#Id '対象者']] [#FDOutput [#Logical [#Equality [#Relational [#AddSub [#MulDivExpMod [#Map3 [#Id '対象者']]]]]]]]] [#FDecl [#FDName [#FName '送金可能金額の確認'] [#FSName 'allowance']] [#FDInput [#Id '対象者'] [#Id '送金者']] [#FDOutput [#Logical [#Equality [#Relational [#AddSub [#MulDivExpMod [#Map2 [#Id '対象者'] [#Id '送金者']]]]]]]]] [#FDecl [#FDName [#FName '送金'] [#FSName 'transfer']] [#FDInput [#Id '対象者'] [#Id '送金額']] [#FDRequire [#Logical [#Equality [#Relational [#AddSub [#MulDivExpMod [#Id '対象者']]]] [#NEQ 'NOT='] [#Relational [#AddSub [#MulDivExpMod [#Addr '0x0']]]]]] [#Logical [#Equality [#Relational [#AddSub [#MulDivExpMod [#Map3 [#Id 'あなた']]]] [#GTE '>='] [#AddSub [#MulDivExpMod [#Id '送金額']]]]]]] [#FDBody [#Assign [#Map3 [#Id 'あなた']] [#Logical [#Equality [#Relational [#AddSub [#MulDivExpMod [#Map3 [#Id 'あなた']]] [#SUB 'ー'] [#MulDivExpMod [#Id '送金額']]]]]]] [#Assign [#Map3 [#Id '対象者']] [#Logical [#Equality [#Relational [#AddSub [#MulDivExpMod [#Map3 [#Id '対象者']]] [#ADD '＋'] [#MulDivExpMod [#Id '送金額']]]]]]]] [#FDOutput [#Logical [#Equality [#Relational [#AddSub [#MulDivExpMod [#BT 'true']]]]]]]] [#FDecl [#FDName [#FName '第3者による送金の許可'] [#FSName 'approve']] [#FDInput [#Id '対象者'] [#Id '指定額']] [#FDRequire [#Logical [#Equality [#Relational [#AddSub [#MulDivExpMod [#Id '送金者']]]] [#NEQ 'NOT='] [#Relational [#AddSub [#MulDivExpMod [#Addr '0x0']]]]]]] [#FDBody [#Assign [#Map2 [#Id 'あなた'] [#Id '対象者']] [#Logical [#Equality [#Relational [#AddSub [#MulDivExpMod [#Id '指定額']]]]]]]] [#FDOutput [#Logical [#Equality [#Relational [#AddSub [#MulDivExpMod [#BT 'true']]]]]]]] [#FDecl [#FDName [#FName '第3者による送金'] [#FSName 'transferFrom']] [#FDInput [#Id '被送金者'] [#Id '対象者'] [#Id '送金額']] [#FDRequire [#Logical [#Equality [#Relational [#AddSub [#MulDivExpMod [#Id '対象者']]]] [#NEQ 'NOT='] [#Relational [#AddSub [#MulDivExpMod [#Addr '0x0']]]]]] [#Logical [#Equality [#Relational [#AddSub [#MulDivExpMod [#Map3 [#Id '被送金者']]]] [#GTE '>='] [#AddSub [#MulDivExpMod [#Id '送金額']]]]]] [#Logical [#Equality [#Relational [#AddSub [#MulDivExpMod [#Map2 [#Id '被送金者'] [#Id 'あなた']]]] [#GTE '>='] [#AddSub [#MulDivExpMod [#Id '送金額']]]]]]] [#FDBody [#Assign [#Map3 [#Id '被送金者']] [#Logical [#Equality [#Relational [#AddSub [#MulDivExpMod [#Map3 [#Id '被送金者']]] [#SUB 'ー'] [#MulDivExpMod [#Id '送金額']]]]]]] [#Assign [#Map3 [#Id '対象者']] [#Logical [#Equality [#Relational [#AddSub [#MulDivExpMod [#Map3 [#Id '対象者']]] [#ADD '＋'] [#MulDivExpMod [#Id '送金額']]]]]]]] [#FDOutput [#Logical [#Equality [#Relational [#AddSub [#MulDivExpMod [#BT 'true']]]]]]]]]"
 
-print(debug(s6))
+# print(debug(s6))

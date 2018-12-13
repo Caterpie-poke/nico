@@ -179,4 +179,6 @@ s02 = "[#Input [#StructDef [#SName 'ほげほげ'] [#SFactor [#W 'ID'] [#T 'int'
 
 # ast = makePD(s02)
 # print(ast.struct)
-
+a = ['hello', 'how are you']
+a = 'hello'
+print(type(a))

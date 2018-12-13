@@ -1,48 +1,37 @@
 import sys
 
 class AST:
-    __slots__ = ['string','pos','output','struct','words','reserved','map','indentLevel','temp','write_to_temp','funcInfo']
+    __slots__ = ['string','pos','struct','words','stvar','reserved','map','indentLevel','funcInfo']
     def __init__(self):
         self.string = ''
         self.pos = 0
-        self.output = ''
         self.struct = {}
-        self.words = {}
+        self.words = {
+            'true':['built-in','bool'],
+            'false':['built-in','bool'],
+            'msg.sender':['built-in','address'],
+            'now':['built-in','int256'],
+        }
+        self.stvar = []
         self.reserved = {
-            '実行者':'msg.sender',
+            'あなた':'msg.sender',
             '今':'now',
-            '契約開始':'constructor',
         }
         self.map = []
         self.indentLevel = 0
-        self.temp = ''
-        self.write_to_temp = False
         self.funcInfo = {'A':'public ', 'B':'view ', 'C':''}
-    def temp_reset(self):
-        self.temp = ""
     def setTree(self,tree):
         self.string = tree
         self.pos = 0
-        self.output = ''
         self.indentLevel = 0
-        self.temp = ''
     def funcInfoReset(self):
         self.funcInfo = {'A':'public ', 'B':'view ', 'C':''}
     def getFuncInfo(self):
         return self.funcInfo['A'] + self.funcInfo['B'] + self.funcInfo['C']
-    def get_tag(self):
-        tag = ""
-        self.require('[')
-        self.pos+=1
-        while(self.current() != ' '):
-            tag += self.current()
-            self.pos+=1
-        self.pos+=1
-        return tag
-    def require(self,ch):
-        if self.current() != ch:
-            print('pos:'+str(self.pos)+' require "'+ch+'", but found "'+self.current()+'"')
-            sys.exit()
+    # def require(self,ch):
+    #     if self.current() != ch:
+    #         print('pos:'+str(self.pos)+' require "'+ch+'", but found "'+self.current()+'"')
+    #         sys.exit()
     def requireNext(self,ch):
         if self.current() != ch:
             print('pos:'+str(self.pos)+' require "'+ch+'", but found "'+self.current()+'"')
@@ -71,8 +60,6 @@ class AST:
         self.indentLevel+=1
     def decIndent(self):
         self.indentLevel-=1
-    def makeIndent(self):
-        self.output+=('    ' * self.indentLevel)
     def Indent(self):
         return '    '*self.indentLevel
     def withType(self,word,mdf):
@@ -85,17 +72,28 @@ class AST:
         #w = 'map02'
         #w = 'numbers[index][i2][i3]'
         #w = 'data.param'
+        #w = 'int(123)'
         if w in self.words:
             return self.words[w][count+1]
         elif w.rfind('.') > 0:
             return self.typeDetect(w[w.rfind('.')+1:],0)
         elif w.rfind('[') > 0:
             return self.typeDetect(w[:w.rfind('[')],count+1)
+        elif w.startswith('int('):
+            return 'int256'
+        elif w.startswith('"') and w.endswith('"'):
+            return 'string'
         else:
-            # print('Not find '+w+' in dict');sys.exit()
+            print('Not find '+w+' in dict');
+            sys.exit()
             return 'Unknown'
-    def inDict(self,w):
-        return w in self.words
+    def isStateVar(self,w):
+        if w.find('.') > 0:
+            return self.isStateVar(w[:w.find('.')])
+        elif w.find('[') > 0:
+            return self.isStateVar(w[:w.find('[')])
+        else:
+            return w in self.stvar
     def structDef(self,key):
         st = ''
         st+=('struct ' + key + ' {')

@@ -59,7 +59,7 @@ def mapTrim(word):
     return word.split('〜')
 
 def rmBracket(word):
-    w = ""
+    w = ''
     ps = False
     for c in word:
         if (c=='(' or c=='（') and (not ps):
@@ -78,6 +78,17 @@ def rmBracket(word):
         else:
             w+=c
     return w
+
+def toMapStr(l):
+    if len(l) == 1:
+        return str(l[0])
+    elif len(l) >= 2:
+        left = str(l[0])
+        right = toMapStr(l[1:])
+        return 'mapping('+left+'->'+right+')'
+    else:
+        print('Map component should be more than 1')
+        sys.exit()
 
 def err(ast):
     ast.output = '{AST_ERROR'

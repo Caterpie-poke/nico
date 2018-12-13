@@ -53,6 +53,7 @@
     本文：
         あなたの残高はあなたの残高ー送金額
         対象者の残高は対象者の残高＋送金額
+        SOL{emit Transfer(「あなた」, 「対象者」, 「送金額」)}
     終了
     出力：
         true
@@ -94,4 +95,12 @@
     出力：
         true
     終了
+終了
+
+
+第8条　Solidity
+    function hogege(uint p1) external returns(bytes4){
+        uint cast = uint(「総発行量」);
+        return bytes4(keccak256('transfer(address,uint)returns(bool)'));
+    }
 終了
