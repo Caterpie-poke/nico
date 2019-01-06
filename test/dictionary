@@ -38,7 +38,20 @@ Alice：生徒情報
 〜の残高：address->int
 〜の数字表：address->intのリスト
 
-
+〜の所有者：int->address
+〜の操作可能者:int->address
+〜の持つトークン数:address->int
+〜のトークンに対して〜が操作可能かどうか:address,address->bool
+対象者:address
+対象トークンID:int
+送付元:address
+送付先:address
+送付トークンID:int
+付与対象者:address
+対象トークン所有者:address
+許可もしくは不許可:bool
+トークン所持者:address
+操作実行者:address
 
 
 /*

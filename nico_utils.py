@@ -47,14 +47,9 @@ library SafeMath {\n\
     }\n\
 }\n\n'
 
-def setFuncMod(ast):
-    a = ast.funcInfo['view']
-    b = ast.funcInfo['mutability']
-    c = ast.funcInfo['returns']
-    ast.output = ast.output.replace('<pA>',a).replace('<pB>',b).replace('<pC>',c)
-
 def mapTrim(word):
     word = rmBracket(word)
+    word = word.replace('X','〜').replace('Y','〜').replace('Z','〜')
     if word[0] == '〜':word=word[1:]
     return word.split('〜')
 
@@ -91,8 +86,11 @@ def toMapStr(l):
         sys.exit()
 
 def err(ast):
-    ast.output = '{AST_ERROR'
-    ast.pos = len(ast.string) - 1
+    ast.requireNext('\'')
+    while(ast.current()!='\''):
+        ast.next()
+    ast.next()
+    return 'AST ERROR'
 
 def charToByte(c):
     return format(ord(c), '04x')
@@ -100,5 +98,6 @@ def strToByte(s):
     hex_str = ""
     for c in s:
         hex_str+=charToByte(c)
-    # return hex_str
+    return hex_str
     return s
+

@@ -1,7 +1,7 @@
 Source
     = _ {
     $Title NL
-    ($ImportDecl)*
+    ($ImportDecl)?
     ($VariableDecl)?
     ($FunctionDecl)*
     #Input
@@ -23,7 +23,6 @@ TAB2 = TAB TAB
 TAB3 = TAB TAB TAB
 NL = ((" ")* EOL)+
 
-"・" = '・' / ","
 "'" = '"' / '\''
 " " = ' ' / '　'
 "," = ',' / '、'
@@ -35,8 +34,7 @@ NL = ((" ")* EOL)+
 "-" = '-' / 'ー'
 "*" = '*' / '＊'
 "/" = '/' / '／'
-"^" = '^' / '＾'
-"**" = ("*" "*") / "^"
+"**" = "*" "*"
 "%" = '%' / '％'
 "=" = '=' / '＝'
 " " = ' ' / '　'
@@ -63,78 +61,65 @@ KANJI = [㐀-䶵一-龠々〇〻]
 MARK = [ー]
 Alphabet = [ａ-ｚＡ-Ｚ０-９]
 
-/*-------------------------Title-------------------------*/
+/*-------------------------PreDescription-------------------------*/
 Title
     = '「' InnerTitle '」'
 InnerTitle
     = {(!'」' C)+ #Title}
 
+FirstArticle
+    = '第0条'
+    / '第０条'
+Article
+    = '第' Digit '条'
+
 /*-------------------------ImportDecl-------------------------*/
 ImportDecl
     = {
     '次の契約を用いる' ":" NL
-    TAB1 $ContractName NL
-    TAB1 $ContractPath NL
-    TAB1 $ContractAddress NL
+    (ImportSet)+
     #IDecl}
-ContractName
+ImportSet
     = {
-    '契約名' ":" $Title "(" '以下、' ${(!'と呼ぶ' C)* #RAW} 'と呼ぶ' ")"
-    #CName}
-ContractPath
-    = {
-    'ファイルの場所' ":" "'" ${(!"'" .)* #RAW} "'"
-    #CPath}
-ContractAddress
-    = {
-    'ブロックチェーン上でのアドレス' ":" $Address
-    #CAddr}
+    TAB1 '契約名' ":" $Title NL
+    TAB1 'ファイルの場所' ":" "'" ${(!SS !"'" .)* #Path} "'" NL
+    TAB1 'ブロックチェーン上でのアドレス' ":" $Address NL
+    }
 
 /*-------------------------VariableDecl-------------------------*/
 VariableDecl
     = {
     FirstArticle SS C+ NL
-    ($VariablePair)+
+    (TAB1 C* SS "(" SS '以下、' VarDecl 'と呼ぶ' SS ")" NL)*
     #VDecl}
-
-FirstArticle
-    = '第0条'
-    / '第０条'
-
-VariablePair
-    = {
-    TAB1 ${C* #RAW} SS "(" SS '以下、' VarDecl 'と呼ぶ' SS ")" NL
-    #Pair}
 
 VarDecl
     = MapDecl
     / Identifier
 
-//MapDecl created by NicoDictionary
-
+//MapDecl created by dictParse
 MapParam
     = "(" (!")" C)+ ")"
     / '〜'
-    / [XYZ]
-    / [ＸＹＺ]
 
 /*-------------------------FunctionDecl-------------------------*/
 FunctionDecl
     = {
-    Article SS 'Solidity' NL
-    (TAB1 $SolLine NL)*
+    Article SS 'Solidity' SS EOL
+    SolBlockInner EOL
+    '' EOL EOL
+    NL
     #SolBlock}
     / {
     Article SS $FuncDeclName NL
     ($FuncDeclInput)?
+//    ($FuncDeclRequire)?
     ($FuncDeclBody)?
+    ($FuncDeclOutput)?
     #FDecl}
 
-Article
-    = '第' Digit '条'
-
-SolLine
-    = {(!EOL .)* #SolLine}
+SolBlockInner
+    = {(!(EOL EOL EOL) .)* #Sol}
 
 FuncDeclName
     = {$FuncName (SS "(" SS $FuncSolName SS ")")? #FDName}
@@ -146,27 +131,32 @@ FuncSolName
 FuncDeclInput
     = {
     TAB1 'パラメータ' ":" NL
-    ($InputPair)*
+    (TAB2 $Identifier NL)*
     #FDInput}
-InputPair
+
+FuncDeclRequire
     = {
-    TAB2 'ETH' NL
-    #ETH}
-    / {
-    TAB2 ${C* #RAW} SS "(" SS '以下、' $Identifier 'と呼ぶ' SS ")" NL
-    #Pair}
+    TAB1 '要件' ":" NL
+    (TAB2 $Expression NL)*
+    #FDRequire}
 
 FuncDeclBody
     = {
-    (TAB1 $Statement NL)+
+    TAB1 '本文' ":" NL
+    (TAB2 $Statement NL)+
     #FDBody}
+
+FuncDeclOutput
+    = {
+    TAB1 '出力' ":" NL
+    (TAB2 $Expression NL)+
+    #FDOutput}
 
 
 /*-------------------------Statement-------------------------*/
 Statement
     = IfStatement
     / RequireStatement
-    / ReturnStatement
     / Solidity
     / Assign
     / LocalVariableDecl
@@ -178,32 +168,27 @@ IfStatement
     $Then
     ($ElseIf)*
     (
-    TAB1 'でなければ'
+    TAB2 'でなければ'
     $Else
     )?
-    TAB1 '終了'
+    TAB2 '終了'
     #If}
 Condition
     = {$LogicalExpr #Cond}
 Then
-    = {(TAB2 TAB* $Statement NL)+ #Then}
+    = {(TAB3 TAB* $Statement NL)+ #Then}
 ElseIf
     = {
-    TAB1 TAB* 'ではなく、もし' SS $Condition SS 'ならば' NL
+    TAB2 TAB* 'ではなく、もし' SS $Condition SS 'ならば' NL
     $Then
     #ElIf}
 Else
-    = {(TAB2 TAB* $Statement NL)+ #Else}
+    = {(TAB3 TAB* $Statement NL)+ #Else}
 
 RequireStatement
     = {
     '要件' Digit SS $Expression
     #Require}
-
-ReturnStatement
-    = {
-    PostfixExpr ("・" SS PostfixExpr)* SS 'を出力として得る'
-    #Return}
 
 Solidity
     = 'SOL{' SolInner '}'
@@ -211,8 +196,8 @@ SolInner
     = {(!'}' !EOL .)* #Sol}
 
 Assign
-    = {$AssignLeft 'は' $AssignRight ('とする')? #Assign}
-    / {$AssignLeft 'を' $AssignRight 'とする' #Assign}
+    = {$AssignLeft SS 'は' SS $AssignRight (SS 'とする')? #Assign}
+    / {$AssignLeft SS 'を' SS $AssignRight SS 'とする' #Assign}
 AssignLeft
     = Tuple
     / PostfixExpr
@@ -222,23 +207,10 @@ AssignRight
 
 //Only used in Assign
 Tuple
-    = {"(" $PrimaryExpr ("," $PrimaryExpr)+ ")" #Tuple}
+    = {"(" SS $PrimaryExpr (SS "," SS $PrimaryExpr)+ SS ")" #Tuple}
 
 LocalVariableDecl
-    = {
-    $Expression 'として'
-    $(PairDecl / Identifier)
-    'を定義する'
-    #LVDeclAssign}
-    / {
-    $(PairDecl / Identifier)
-    'を定義する'
-    #LVDecl}
-
-PairDecl
-    = {
-    ${C* #RAW} "(" '以下、' $Identifier 'と呼ぶ' ")"
-    #Pair}
+    = {($Expression SS 'として' SS)? $Identifier SS 'をおく' #LocalVDecl}
 
 /*-------------------------Expression-------------------------*/
 Expression
@@ -250,15 +222,12 @@ Expression
 /*-------------------------FunctionExpr-------------------------*/
 FunctionExpression
     = {
-    '契約' ${(!'より' C)* #RAW} 'より、'
-    ($FuncExprParam ("・" $FuncExprParam)* 'をパラメータとして')?
-    $FuncExprName ('を行う' / 'を行った結果')
+    ($FuncExprParam (SS "," SS $FuncExprParam)* SS 'をパラメータとして' SS )? $FuncExprName SS ('を行う' / 'を行なった結果')
     #FExpr}
-
 FuncExprParam
     = {$PostfixExpr #FEParam}
 FuncExprName
-    = {(!'を行う' !'を行った結果' C)+ #FEName}
+    = {!Preserved (!'を行う' !'を行なった結果' C)+ #FEName}
 Preserved
     = 'とする'
     / 'として'
@@ -276,8 +245,7 @@ Preserved
     / 'または'
 
 InnerFunction
-    = {'本契約のアドレスが持つETHから、' PostfixExpr 'を' PostfixExpr 'へ送金する' #EthTransfer}
-    / {PostfixExpr 'を' PostfixExpr 'だけ増やす' #IncFunc}
+    = {PostfixExpr 'を' PostfixExpr 'だけ増やす' #IncFunc}
     / {PostfixExpr 'を' PostfixExpr 'だけ減らす' #DecFunc}
     / {PostfixExpr 'に' PostfixExpr 'を追加する' #PushFunc}
     / {PostfixExpr 'が存在する' #AddrExistFunc}
@@ -300,13 +268,9 @@ CMPR
 AddSubExpr
     = {$MulDivExpModExpr (SS $({"+" #ADD}/{"-" #SUB}) SS $MulDivExpModExpr)* #AddSub}
 MulDivExpModExpr
-    = {$ReservedExpr (SS $({"*" #MUL}/{"/" #DIV}/{"**" #EXP}/{"%" #MOD}) SS $ReservedExpr)* #MulDivExpMod}
+    = {$PostfixExpr (SS $({"*" #MUL}/{"/" #DIV}/{"**" #EXP}/{"%" #MOD}) SS $PostfixExpr)* #MulDivExpMod}
 
 /*-------------------------PostfixExpr-------------------------*/
-ReservedExpr
-    = {PostfixExpr 'のサイズ' #Leng}
-    / PostfixExpr
-
 PostfixExpr
     = StructRef
     / ArrayRef
@@ -345,8 +309,6 @@ Address
     = {'0x'
     [0-9] [0-9] [0-9] [0-9] [0-9] [0-9] [0-9] [0-9] [0-9] [0-9]
     [0-9] [0-9] [0-9] [0-9] [0-9] [0-9] [0-9] [0-9] [0-9] [0-9]
-    [0-9] [0-9] [0-9] [0-9] [0-9] [0-9] [0-9] [0-9] [0-9] [0-9]
-    [0-9] [0-9] [0-9] [0-9] [0-9] [0-9] [0-9] [0-9] [0-9] [0-9]
     #Addr}
     / {'0x0' ![0-9] #Addr}
 
@@ -363,59 +325,3 @@ String
 Identifier
     = {FromDict #Id}
 
-MapRef
-    = {$PrimaryExpr 'の残高' #Map0}
-    / {$PrimaryExpr 'から' $PrimaryExpr 'が送金可能な額' #Map1}
-    / {$PrimaryExpr 'の保有者' #Map2}
-    / {$PrimaryExpr 'の保有データ数' #Map3}
-    / {$PrimaryExpr 'の販売利益' #Map4}
-
-MapDecl
-    = {MapParam 'の残高' #DMap0}
-    / {MapParam 'から' MapParam 'が送金可能な額' #DMap1}
-    / {MapParam 'の保有者' #DMap2}
-    / {MapParam 'の保有データ数' #DMap3}
-    / {MapParam 'の販売利益' #DMap4}
-
-FromDict
-    = '〜から〜が送金可能な額'
-    / '受け取ったETH'
-    / '受け取ったETH'
-    / '〜の保有データ数'
-    / '〜の販売利益'
-    / 'データリスト'
-    / 'false'
-    / 'false'
-    / '対象データ'
-    / '〜の保有者'
-    / '送金許可額'
-    / 'true'
-    / 'true'
-    / '旧保有者'
-    / '対象ID'
-    / '参照ID'
-    / '新規ID'
-    / '新規ログ'
-    / '新規価格'
-    / '新規名称'
-    / '被送金者'
-    / '〜の残高'
-    / '総発行量'
-    / '本契約'
-    / 'あなた'
-    / '本契約'
-    / 'あなた'
-    / '総利益'
-    / '許可額'
-    / '送金額'
-    / '送金先'
-    / '送金者'
-    / '保有者'
-    / '対象者'
-    / '指定値'
-    / '本契約'
-    / '販売中'
-    / '価格'
-    / '名前'
-    / '今'
-    / '今'

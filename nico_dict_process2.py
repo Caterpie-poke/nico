@@ -6,6 +6,7 @@ def makePD(tree):
     ast = AST()
     ast.setTree(tree)
     (none,tag) = getNode(ast)
+    ast.reservedToWords()
     return ast, ast.additionalPEG()
 
 def Input(ast):
@@ -33,7 +34,7 @@ def SName(ast):
         sn+=ast.current()
         ast.next()
     ast.next()
-    return strToByte(sn)
+    return 's_'+strToByte(sn)
 
 def Dict(ast):
     (w,tag) = getNode(ast)
@@ -49,7 +50,6 @@ def Dict(ast):
     return w
 
 def Array(ast):
-    #return ['int[][]', 'int[]', 'int']2
     count = 0
     ats = []
     (at,tag) = getNode(ast)
@@ -109,22 +109,22 @@ def MW(ast):
         mw+=ast.current()
         ast.next()
     ast.next()
-    mw = mapTrim(mw)
+    nmw = mapTrim(mw)
     mn = 'map' + str(len(ast.map))
-    ast.words[mn] = [mn]
-    ast.map.append(mw)
+    ast.words[mn] = [mw]
+    ast.map.append(nmw)
     return mn
 
 def T(ast):
-    tp = ''
+    t = ''
     ast.requireNext('\'')
     while(ast.current()!='\''):
-        tp+=ast.current()
+        t+=ast.current()
         ast.next()
     ast.next()
-    if tp == 'int':
-        tp = 'int256'
-    return tp
+    if t == 'int':
+        t = 'int256'
+    return t
 
 def ST(ast):
     st = ''

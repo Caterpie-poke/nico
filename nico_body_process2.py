@@ -4,32 +4,30 @@ from nico_utils import *
 
 def makeSOL(ast,tree):
     ast.setTree(tree)
+    ast.precode += 'pragma solidity ^' + ast.version + ';\n'
     (code,tag) = getNode(ast)
-    # tagMatch(tag,['Input'])
-    return code
+    return ast.precode + '\n' + safeMath*(not ast.imported) + code
 
 def debug(tree):
     ast = AST()
     ast.setTree(tree)
     (code,tag) = getNode(ast)
-    # tagMatch(tag,['Input'])
     return code
 
 def Input(ast):
     code = ''
     (title,tag) = getNode(ast)
-    # tagMatch(tag,['Title'])
-    version = 'pragma solidity ^0.4.24;\n'
-    code += ast.Indent() + version + safeMath
-    code += ast.Indent() + 'contract ' + title + ' {\n'
+    code += 'contract ' + title + ' {\n'
     ast.incIndent()
-    code += ast.Indent() + 'using SafeMath for int256;\n\n'
+    code += ast.Indent() + 'using SafeMath for int256;\n'
+    for k in ast.struct:
+        code += ast.Indent() + ast.structDefWrite(k) + '\n'
+    code += '\n'
     while(ast.current()==' '):
         ast.next()
-        (s,tag) = getNode(ast)
-        # tagMatch(tag,['VDecl','FDecl'])
+        (ds,tag) = getNode(ast)
         if tag in ['FDecl','Sol']:code+='\n'
-        code += s
+        code += ds
     ast.decIndent()
     code += ast.Indent() + '}\n'
     return code
@@ -43,6 +41,47 @@ def Title(ast):
     ast.next()
     return 'c_'+strToByte(title)
 
+def IDecl(ast):
+    ((cname,alias),tag) = getNode(ast)
+    ast.next()
+    (cpath,tag) = getNode(ast)
+    ast.next()
+    (caddr,tag) = getNode(ast)
+    ast.precode += 'import \'' + cpath.replace('.nc', '.sol') + '\';\n'
+    ast.imported = True
+    s_instance = ast.Indent() + cname + ' ' + alias + ' = ' + cname + '(' + caddr + ');\n'
+    return s_instance
+
+def CName(ast):
+    (title,tag) = getNode(ast)
+    ast.next()
+    (raw,tag) = getNode(ast)
+    return (title, raw)
+
+def CPath(ast):
+    (path,tag) = getNode(ast)
+    return path
+
+def CAddr(ast):
+    (addr,tag) = getNode(ast)
+    return addr
+
+def Pair(ast):
+    (raw,tag) = getNode(ast)
+    ast.next()
+    (v,tag) = getNode(ast)
+    ast.words[v][0] = raw
+    return v
+
+def RAW(ast):
+    raw = ''
+    ast.requireNext('\'')
+    while(ast.current()!='\''):
+        raw += ast.current()
+        ast.next()
+    ast.next()
+    return raw
+
 def VDecl(ast):
     vs = []
     code = ''
@@ -52,7 +91,7 @@ def VDecl(ast):
         (s,tag) = getNode(ast)
         vs.append(s)
     for v in vs:
-        code += ast.Indent() + ast.withType(v,'internal') + ';\n'
+        code += ast.Indent() + ast.withType(v,'internal') + ';' + '    /*' + ast.words[v][0] + '*/\n'
         ast.stvar.append(v)
     return code
 
@@ -63,36 +102,55 @@ def DMap(ast,count):
     ast.next()
     return 'map' + count
 
+def SolBlock(ast):
+    code = ''
+    ast.back()
+    while(ast.current()==' '):
+        ast.next()
+        (line,tag) = getNode(ast)
+        code += ast.Indent() + line + '\n'
+    return code
+
+def SolLine(ast):
+    code = ''
+    ast.requireNext('\'')
+    while(ast.current()!='\''):
+        code+=ast.current()
+        ast.next()
+    ast.next()
+    return code
+
 def FDecl(ast):
     code = ''
     codes = {
         'FDName':'',
         'FDInput':'',
-        'FDRequire':'',
         'FDBody':'',
-        'FDOutput':''
     }
     ast.back()
     ast.funcInfoReset()
+    ast.doxygenReset()
     ast.incIndent()
     while(ast.current()==' '):
         ast.next()
         (c,tag) = getNode(ast)
-        # tagMatch(tag, ['FDName','FDInput','FDRequire','FDBody','FDOutput'])
         codes[tag] = c
     ast.decIndent()
-    code += ast.Indent()+'function '+codes['FDName']+'('+codes['FDInput']+') '+ast.getFuncInfo()+'{\n'
-    code += codes['FDRequire'] + codes['FDBody'] + codes['FDOutput']
+    isConstructor = (codes['FDName'] == 'constructor')
+    code += ast.Indent() + '/*\n'
+    for dxstmt in ast.doxygen:
+        code += ast.Indent() + dxstmt + '\n'
+    code += ast.Indent() + '*/\n'
+    code += ast.Indent()+('function ' * (not isConstructor))+codes['FDName']+'('+codes['FDInput']+') '+ast.getFuncInfo()+'{\n'
+    code += codes['FDBody']
     code += ast.Indent()+'}\n'
     return code
 
 def FDName(ast):
     (fname,tag) = getNode(ast)
-    # tagMatch(tag,['FName'])
     if ast.current() == ' ':
         ast.next()
         (fname,tag) = getNode(ast)
-        # tagMatch(tag,['FSName'])
     return fname
 
 def FName(ast):
@@ -102,7 +160,9 @@ def FName(ast):
         fn+=ast.current()
         ast.next()
     ast.next()
-    return 'f_'+strToByte(fn)
+    code = 'f_'+strToByte(fn)
+    ast.doxygen.append('@function '+code+' '+fn)
+    return code
 
 def FSName(ast):
     fsn = ''
@@ -111,6 +171,9 @@ def FSName(ast):
         fsn+=ast.current()
         ast.next()
     ast.next()
+    dx = ast.doxygen[-1].split(' ')
+    dx[1] = fsn
+    ast.doxygen[-1] = dx[0]+' '+dx[1]+' '+dx[2]
     return fsn
 
 def FDInput(ast):
@@ -120,20 +183,20 @@ def FDInput(ast):
     while(ast.current()==' '):
         ast.next()
         (s,tag) = getNode(ast)
-        # tagMatch(tag,['Id'])
-        inputs.append(s)
+        if(tag != 'ETH'):
+            inputs.append(s)
+            ast.doxygen.append('@param '+s+' '+ast.words[s][0])
     for i in inputs:
-        code += ', '+ast.withType(i,'')
+        code += ', '+ast.withType(i,'memory')
     return code[2:]
 
-def FDRequire(ast):
-    code = ''
-    ast.back()
-    while(ast.current()==' '):
+def ETH(ast):
+    ast.requireNext('\'')
+    while(ast.current()!='\''):
         ast.next()
-        (e,tag) = getNode(ast)
-        code+=ast.Indent()+'require('+e+');\n'
-    return code
+    ast.next()
+    ast.funcInfo['B'] = 'payable'
+    return None
 
 def FDBody(ast):
     code = ''
@@ -145,54 +208,102 @@ def FDBody(ast):
         stmts.append(s)
     for s in stmts:
         code += ast.Indent() + s + ';\n'
+        if(s.startswith('if')):
+            code = code[:-2] + '\n'
     return code
 
-def FDOutput(ast):
+def Return(ast):
     code = ''
     tcode = ''
-    exprs = []
+    ext = ''
     ast.back()
     while(ast.current()==' '):
         ast.next()
-        (e,tag) = getNode(ast)
-        code += ', '+e
-        tcode += ', '+ast.typeDetect(e,0)
+        (rs,tag) = getNode(ast)
+        if(rs in ast.words):
+            ext = ' '+ast.words[rs][0]
+        ast.doxygen.append('@return '+rs+ext)
+        code += ', '+rs
+        retType = ast.typeDetect(rs,0)
+        if(retType not in ['int256','address', 'bool']):
+            retType+=' memory'
+        tcode += ', '+ retType
     ast.funcInfo['C'] += 'returns('+tcode[2:]+')'
-    return ast.Indent()+'return ('+code[2:]+');\n'
+    return 'return ('+code[2:]+')'
 
 def FExpr(ast):
     code = ''
+    (raw,tag) = getNode(ast)
+    ast.next()
     params = []
     (s,tag) = getNode(ast)
-    while(tag != 'FEName'):
+    while(tag == 'FEParam'):
         params.append(s)
         ast.next()
         (s,tag) = getNode(ast)
-    code += s + '('
+    code += raw + '.' + s + '('
     for i in range(len(params)):
         if i!=0:
             code+=', '
         code+=params[i]
     code+=')'
-    ast.funcInfo['B'] = ''
+    ast.notView()
     return code
+
+def IncFunc(ast):
+    (base,tag) = getNode(ast)
+    ast.next()
+    (diff,tag) = getNode(ast)
+    if(ast.isStateVar(base)):
+        ast.notView()
+    return base + ' = ' + base + '.add(' + diff + ')'
+
+def DecFunc(ast):
+    (base,tag) = getNode(ast)
+    ast.next()
+    (diff,tag) = getNode(ast)
+    if(ast.isStateVar(base)):
+        ast.notView()
+    return base + ' = ' + base + '.sub(' + diff + ')'
+
+def PushFunc(ast):
+    (to,tag) = getNode(ast)
+    ast.next()
+    (ct,tag) = getNode(ast)
+    if(ast.isStateVar(to)):
+        ast.notView()
+    return to + '.push(' + ct + ')'
+
+def AddrExistFunc(ast):
+    (addr,tag) = getNode(ast)
+    return addr + ' != 0x0'
+
+def EthTransfer(ast):
+    (amount,tag) = getNode(ast)
+    ast.next()
+    (target,tag) = getNode(ast)
+    return 'address('+target+').transfer(uint256('+amount+'))'
 
 def If(ast):
     code = ''
+    elfs = []
+    els = ''
     (cnd,tag) = getNode(ast)
     ast.next()
     (thn,tag) = getNode(ast)
-    ast.next()
-    (els,tag) = getNode(ast)
-    while(tag=='ElIf'):
-        elf.append(els)
+    if ast.current() != ']':
         ast.next()
         (els,tag) = getNode(ast)
-    code+=ast.Indent()+'if('+cond+'){\n'
+    while(tag=='ElIf'):
+        elfs.append(els)
+        ast.next()
+        (els,tag) = getNode(ast)
+    code+='if('+cnd+'){\n'
     code+=thn
     for elf in elfs:
         code+=elf
     code+=els
+    code+=ast.Indent()+'}'
     return code
 
 def Cond(ast):
@@ -235,7 +346,11 @@ def Else(ast):
     for s in stmts:
         code+=ast.Indent()+s+';\n'
     ast.decIndent()
-    code+=ast.Indent()+'}'
+    return code
+
+def Require(ast):
+    (e,tag) = getNode(ast)
+    code = 'require('+e+')'
     return code
 
 def Sol(ast):
@@ -246,7 +361,7 @@ def Sol(ast):
         ast.next()
     ast.next()
     code = allReplace(ast,code)
-    ast.funcInfo['B'] = ''
+    ast.notView()
     return code
 
 def allReplace(ast,s):
@@ -255,22 +370,19 @@ def allReplace(ast,s):
         end = s.find('」')
         before = s[begin+1:end]
         if before in ast.reserved:
-            after = ast.reserved[before]
+            after = ast.reserved[before][0]
         else:
             after = 'v_' + strToByte(before)
         s = s.replace('「'+before+'」', after)
         begin = s.find('「')
     return s
 
-
-
-
 def Assign(ast):
     (left,tag) = getNode(ast)
     ast.next()
     (right,tag) = getNode(ast)
     if ast.isStateVar(left):
-        ast.funcInfo['B'] = ''
+        ast.notView()
     return left+' = '+right
 
 def Tuple(ast):
@@ -289,11 +401,17 @@ def Tuple(ast):
     code += ')'
     return code
 
-def LocalVDecl(ast):
+def LVDecl(ast):
+    (v,tag) = getNode(ast)
+    ast.doxygen.append('@localVar '+v+' '+ast.words[v][0])
+    return ast.withType(v,'memory')
+
+def LVDeclAssign(ast):
     (right,tag) = getNode(ast)
     ast.next()
     (left,tag) = getNode(ast)
-    return ast.withType(left,'memory')+' = '+right
+    ast.doxygen.append('@localVar '+left+' '+ast.words[left][0])
+    return ast.withType(left,'memory') + ' = ' + right
 
 def FEName(ast):
     code = ''
@@ -473,25 +591,47 @@ def EXP(ast):
 
 def StructRef(ast):
     code = ''
+    ja = ''
     ast.back()
     while(ast.current()==' '):
         ast.next()
         (scmp,tag) = getNode(ast)
         code+='.'+scmp
+        ja+='の'+ast.words[scmp][0]
+    ast.words[code[1:]] = [ja[1:]]
+    ast.words[code[1:]].extend(ast.words[scmp][1:])
     return code[1:]
+
+def Leng(ast):
+    code = ''
+    (inner,tag) = getNode(ast)
+    code = 'int256('+inner+'.length)'
+    ja = ast.words[inner][0]
+    ast.words[code] = [ja+'のサイズ','int']
+    return code
 
 def ArrayRef(ast):
     code = ''
+    ja = ''
     (acmp,tag) = getNode(ast)
     code += acmp
+    ja += ast.words[acmp][0]
+    c = 1
     while(ast.current()==' '):
+        ast.next()
+        c+=1
         (idx,tag) = getNode(ast)
         code += '[' + idx + ']'
+        ja += 'の'+ast.words[idx][0]+'番目'
+    ast.words[code] = [ja]
+    ast.words[code].extend(ast.words[acmp][c:])
     return code
 
 def Index(ast):
     (idx,tag) = getNode(ast)
-    return idx
+    code = 'uint256('+idx+')'
+    ast.words[code] = [ast.words[idx][0]]
+    return code
 
 def BT(ast):
     w = ''
@@ -522,12 +662,15 @@ def Addr(ast):
 
 def Int(ast):
     w = ''
+    code = ''
     ast.requireNext('\'')
     while(ast.current()!='\''):
         w+=ast.current()
         ast.next()
     ast.next()
-    return 'int('+w+')'
+    code = 'int256('+w+')'
+    ast.words[code] = [str(w)]
+    return code
 
 def String(ast):
     w = ''
@@ -536,7 +679,9 @@ def String(ast):
         w+=ast.current()
         ast.next()
     ast.next()
-    return '"'+w+'"'
+    code = '"'+w+'"'
+    ast.words[code] = [ast.words[w][0]]
+    return code
 
 def Id(ast):
     w = ''
@@ -546,18 +691,30 @@ def Id(ast):
         ast.next()
     ast.next()
     if w in ast.reserved:
-        w = ast.reserved[w]
+        w = ast.reserved[w][0]
     else:
         w = 'v_'+strToByte(w)
     return w
 
 def Map(ast,count):
     code = 'map'+count
+    tmap = ast.map[int(count)]
+    params = []
+    ja = ''
+    c = 0
     ast.back()
     while(ast.current()==' '):
         ast.next()
         (p,tag) = getNode(ast)
+        params.append(p)
+    if len(params)<len(tmap):
+        ja+=tmap[0]
+        tmap=tmap[1:]
+    for p in params:
         code+='['+p+']'
+        ja+=ast.words[p][0]+tmap[c]
+        c+=1
+    ast.words[code] = [ja,ast.words['map'+count][-1]]
     return code
 
 def getNode(ast):
@@ -579,12 +736,6 @@ def getNode(ast):
     ast.requireNext(']')
     return (inner,tag)
 
-"""
-def tagMatch(tag,tags):
-    if tag not in tags:
-        print(tag+' not find in '+str(tags))
-        sys.exit()
-"""
 
 # ----------------------------------------------------------------------------------------------------
 s0 = "[#Input [#Title 'テスト']]"
