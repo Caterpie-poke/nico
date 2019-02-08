@@ -304,7 +304,7 @@ MulDivExpModExpr
 
 /*-------------------------PostfixExpr-------------------------*/
 ReservedExpr
-    = {PostfixExpr 'のサイズ' #Leng}
+    = {PostfixExpr 'の長さ' #Leng}
     / PostfixExpr
 
 PostfixExpr

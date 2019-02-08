@@ -63,6 +63,32 @@ def Array(ast):
     ats.append(at)
     return ats
 
+def Enum(ast):
+    ast.back()
+    inner = ''
+    while(ast.current()==' '):
+        ast.next()
+        (en,tag) = getNode(ast)
+        inner += ','+en
+    n = len(ast.enum)
+    inner = inner[1:]
+    if inner not in ast.enum:
+        ast.enum.append(inner)
+    else:
+        n = ast.enum.index(inner)
+    return 'Enum'+str(n)
+
+def EN(ast):
+    en = ''
+    ast.requireNext('\'')
+    while(ast.current()!='\''):
+        en+=ast.current()
+        ast.next()
+    ast.next()
+    enw = 'v_'+strToByte(en)
+    ast.words[enw] = [en]
+    return enw
+
 def Map(ast):
     tlist = []
     ast.back()

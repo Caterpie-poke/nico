@@ -14,6 +14,13 @@ def parse(tpeg, src_path):
         tree = repr(parser(src))
     return tree
 
+def parse2(tpeg, src_txt):
+    g = Grammar(tpeg)
+    g.load(tpeg)
+    parser = nez(g)
+    tree = repr(parser(src_txt))
+    return tree
+
 def transpile(nc_path, nd_path, sol_path):
     nc_tpeg = './pegpy/grammar/nico_cont_tab2.tpeg'
     nd_tpeg = './pegpy/grammar/nico_dict.tpeg'
@@ -58,7 +65,7 @@ def command(cmd):
 
 # -------------------- Test Code --------------------
 def all_test(nc_path, nd_path):
-    sol_path  = nc_path.replace('.nc', '.sol')
+    sol_path = nc_path.replace('.nc', '.sol')
     nc_tpeg = './pegpy/grammar/nico_cont_tab2.tpeg'
     nd_tpeg = './pegpy/grammar/nico_dict.tpeg'
 
@@ -92,7 +99,49 @@ def all_test(nc_path, nd_path):
     with open(sol_path, mode='w', encoding='utf-8') as fsol:
         fsol.write(solCode)
 
-nc = 'sample_eval/trade_erc.nc'
-nd = 'sample_eval/sample.nd'
+# -------------------- Test Code 2 --------------------
+def all_test2(src_path):
+    sol_path = (src_path).replace('.nc', '_test_output.sol')
+    nc_tpeg = './pegpy/grammar/nico_cont_tab2.tpeg'
+    nd_tpeg = './pegpy/grammar/nico_dict.tpeg'
 
-# all_test(nc,nd)
+    with open(src_path, mode='r', encoding='utf-8') as f:
+        src = f.read()
+        (nc_txt,nd_txt) = src.split('＊付録＊')
+
+    print('-------------------- NicoDictionary\'s AST --------------------')
+    dict_tree = parse2(nd_tpeg, nd_txt)
+    print(dict_tree, '\n')
+
+    print('-------------------- ExternalPEG from dict_tree --------------------')
+    (ast, externalPEG) = makePD(dict_tree)
+    print(externalPEG, '\n')
+
+    print('-------------------- AST check --------------------')
+    print('----- struct -------\n', ast.struct)
+    print('----- words --------\n', ast.words)
+    print('----- stvar --------\n', ast.stvar)
+    print('----- reserved -----\n', ast.reserved)
+    print('----- map ----------\n', ast.map, '\n')
+
+    print('-------------------- NicoContract\'s AST --------------------')
+    merged_tpeg = './pegpy/grammar/nico_merge.tpeg'
+    with open(nc_tpeg, mode='r', encoding='utf-8') as f1:
+        with open(merged_tpeg, mode='w', encoding='utf-8') as f2:
+            front = f1.read()
+            f2.write(front+externalPEG)
+    main_tree = parse2(merged_tpeg, nc_txt)
+    print(main_tree, '\n')
+
+    print('-------------------- Solidity Output --------------------')
+    solCode = makeSOL(ast,main_tree)
+    print(solCode, '\n')
+    with open(sol_path, mode='w', encoding='utf-8') as fsol:
+        fsol.write(solCode)
+
+
+nc = 'sample_eval/erc20_sample.nc'
+# nc = 'sample_eval/trade_erc.nc'
+nd = 'sample_eval/dictionary.nd'
+
+all_test2(nc)

@@ -1,0 +1,12 @@
+＃辞書
+総発行量：int
+Xの残高：address->int
+XからYが送金可能な額：address,address->int
+指定値：int
+対象者：address
+保有者：address
+送金者：address
+送金先：address
+送金額：int
+許可額：int
+被送金者：address

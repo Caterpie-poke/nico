@@ -99,5 +99,5 @@ def strToByte(s):
     for c in s:
         hex_str+=charToByte(c)
     return hex_str
-    return s
+    # return s
 

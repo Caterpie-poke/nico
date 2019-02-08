@@ -67,6 +67,7 @@ Word
 
 Type
     = ArrayType
+    / EnumType
     / PrimitiveType
     / StructType
 
@@ -80,6 +81,12 @@ MapRetType
 
 ArrayType
     = {$BaseType ($List)+ #Array}
+EnumType
+    = {
+    '{' _ EnumNode (_ '/' _ EnumNode)* _ '}'
+    #Enum}
+EnumNode
+    = {(!'}' !'/' C)+ #EN}
 BaseType
     = PrimitiveType
     / StructType
@@ -93,5 +100,5 @@ PrimitiveType
     / {'string' #T}
 
 StructType
-    = {(!":" !'のリスト' !"->" C)+ #ST}
+    = {(!":" !'のリスト' !'{' !"->" C)+ #ST}
 

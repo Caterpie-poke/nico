@@ -1,13 +1,14 @@
 import sys
 
 class AST:
-    __slots__ = ['string','pos','version','precode','struct','words','stvar','reserved','map','indentLevel','funcInfo', 'imported', 'doxygen']
+    __slots__ = ['string','pos','version','precode','struct','enum','words','stvar','reserved','map','indentLevel','funcInfo', 'imported', 'doxygen']
     def __init__(self):
         self.string = ''
         self.pos = 0
         self.version = '0.4.24'
         self.precode = ''
         self.struct = {}
+        self.enum = []
         self.words = {}
         self.stvar = []
         self.reserved = {
@@ -17,6 +18,8 @@ class AST:
             'false':['false', 'bool'],
             '本契約':['address(this)', 'address'],
             '受け取ったETH':['int256(msg.value)', 'int256'],
+            '販売中':['Enum0.v_8ca958f24e2d', 'Enum0'],
+            '販売休止':['Enum0.v_8ca958f24f116b62', 'Enum0']
         }
         self.map = []
         self.indentLevel = 0
