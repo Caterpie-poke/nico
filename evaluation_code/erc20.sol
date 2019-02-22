@@ -80,14 +80,6 @@ contract c_00450052004300320030306b57fa3065304f4eee60f3901a8ca8306b95a23059308b5
     }
 
     /*
-    @function f_4eee60f3901a8ca8540d306e78ba8a8d 仮想通貨名の確認
-    @return v_4eee60f3901a8ca8540d 仮想通貨の名称
-    */
-    function f_4eee60f3901a8ca8540d306e78ba8a8d() public view returns(string memory){
-        return (v_4eee60f3901a8ca8540d);
-    }
-
-    /*
     @function balanceOf 残高の確認
     @param v_5bfe8c618005 残高の確認を求める指定された人物
     @return map0[v_5bfe8c618005] 残高の確認を求める指定された人物の残高

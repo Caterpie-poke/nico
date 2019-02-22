@@ -95,13 +95,9 @@ ContractAddress
 /*-------------------------VariableDecl-------------------------*/
 VariableDecl
     = {
-    FirstArticle SS C+ NL
+    Article SS C+ NL
     ($VariablePair)+
     #VDecl}
-
-FirstArticle
-    = '第1条'
-    / '第１条'
 
 VariablePair
     = {
@@ -138,7 +134,7 @@ FunctionDecl
     #FDecl}
 
 Article
-    = '第' Digit '条'
+    = '第' [0-9]+ '条' ([0-9]+ '項')?
 
 SolLine
     = {(!EOL .)* #SolLine}
