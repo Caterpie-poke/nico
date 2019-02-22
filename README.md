@@ -5,12 +5,12 @@ You can use this to implement an Ethereum Smart Contract.
 
 Nico Smart Contract is transcompiled to Solidity Smart Contract.
 
-# Usage
+# Example
 ```
-$ python3 main.py <contract_file>.nc
+$ python3 main.py evaluation_code/erc20.nc
 ```
 
-You can get <contract_file>.sol
+When run above, you can get erc20.sol
 
 Please compile that with Solidity Compiler.
 
