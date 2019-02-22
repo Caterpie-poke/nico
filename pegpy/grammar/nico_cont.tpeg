@@ -1,0 +1,387 @@
+Source
+    = _ {
+    $Title NL
+    ($ImportDecl)*
+    ($VariableDecl)
+    ($FunctionDecl)*
+    #Input
+    } TypeDef EOF
+
+_            = ( S / BLOCKCOMMENT / LINECOMMENT )*
+__           = ( S / BLOCKCOMMENT / LINECOMMENT )+
+S            = [ \t\n\r] / '　'
+BLOCKCOMMENT = '/*' ( !'*/' . )* '*/'
+             / '(*' ( !'*)' . )* '*)'
+LINECOMMENT  = '//' ( !EOL . )* EOL
+EOF          = !.
+EOL          = ('\r'? '\n') / EOF
+
+TypeDef = '第' [0-9]+ '条' _ '型録' .*
+
+SS = (" ")*
+TAB = '    ' / [\t] / '　　　　'
+TAB1 = TAB
+TAB2 = TAB TAB
+TAB3 = TAB TAB TAB
+NL = ((" ")* EOL)+
+
+"・" = '・' / ","
+"'" = '"' / '\''
+" " = ' ' / '　'
+"," = ',' / '、'
+"(" = '(' / '（'
+")" = ')' / '）'
+"<" = '<' / '＜'
+">" = '>' / '＞'
+"+" = '+' / '＋'
+"-" = '-' / 'ー'
+"*" = '*' / '＊'
+"/" = '/' / '／'
+"^" = '^' / '＾'
+"**" = ("*" "*") / "^"
+"%" = '%' / '％'
+"=" = '=' / '＝'
+" " = ' ' / '　'
+"@" = '@' / '＠'
+":" = ':' / '：'
+">=" = '>=' / '＞＝'
+"<=" = '<=' / '＜＝'
+"NOT=" = 'NOT=' / 'NOT＝'
+
+C
+    = HIRA
+    / KATA
+    / KANJI
+    / MARK
+    / Alphabet
+    / [a-zA-Z0-9]
+
+Any
+    = [a-zA-Z0-9]
+
+HIRA = [ぁ-ん]
+KATA = [ァ-ヶ]
+KANJI = [㐀-䶵一-龠々〇〻]
+MARK = [ー]
+Alphabet = [ａ-ｚＡ-Ｚ０-９]
+
+/*-------------------------Title-------------------------*/
+Title
+    = '「' InnerTitle '」'
+InnerTitle
+    = {(!'」' C)+ #Title}
+
+/*-------------------------ImportDecl-------------------------*/
+ImportDecl
+    = {
+    '次の契約を用いる' ":" NL
+    TAB1 $ContractName NL
+    TAB1 $ContractPath NL
+    TAB1 $ContractAddress NL
+    #IDecl}
+ContractName
+    = {
+    '契約名' ":" $Title "(" '以下、' ${(!'と呼ぶ' C)* #RAW} 'と呼ぶ' ")"
+    #CName}
+ContractPath
+    = {
+    'ファイルの場所' ":" "'" ${(!"'" .)* #RAW} "'"
+    #CPath}
+ContractAddress
+    = {
+    'ブロックチェーン上でのアドレス' ":" $Address
+    #CAddr}
+
+/*-------------------------VariableDecl-------------------------*/
+VariableDecl
+    = {
+    FirstArticle SS C+ NL
+    ($VariablePair)+
+    #VDecl}
+
+FirstArticle
+    = '第1条'
+    / '第１条'
+
+VariablePair
+    = {
+    TAB1 ${C* #RAW} SS "(" SS '以下、' VarDecl 'と呼ぶ' SS ")" NL
+    #Pair}
+
+VarDecl
+    = MapDecl
+    / Identifier
+
+//MapDecl created by NicoDictionary
+
+MapParam
+    = "(" (!")" C)+ ")"
+    / '〜'
+    / [XYZ]
+    / [ＸＹＺ]
+
+/*-------------------------FunctionDecl-------------------------*/
+FunctionDecl
+    = {
+    Article _ 'Solidity' NL
+    (TAB1 $SolLine NL)*
+    #SolBlock}
+    / {
+    Article _ $EventDeclName NL
+    ($EventDeclInput)?
+    TAB1 '以上を' ((!'として台帳に記録する' C)* 'として')? '台帳に記録する' NL
+    #EDecl}
+    / {
+    Article _ $FuncDeclName NL
+    ($FuncDeclInput)?
+    ($FuncDeclBody)?
+    #FDecl}
+
+Article
+    = '第' Digit '条'
+
+SolLine
+    = {(!EOL .)* #SolLine}
+
+EventDeclName
+    = {$EventName ( "(" $EventSolName ")")? #EDName}
+EventName
+    = {(!'の記録' C)+ 'の記録' #EName}
+EventSolName
+    = {[a-zA-Z] [a-zA-Z0-9]* #ESName}
+
+EventDeclInput
+    = {
+    ($InputPair)+
+    #EDInput}
+
+
+FuncDeclName
+    = {$FuncName ( "(" $FuncSolName ")")? #FDName}
+FuncName
+    = {(!"(" !'型録' C)+ #FName}
+FuncSolName
+    = {[a-zA-Z] [a-zA-Z0-9]* #FSName}
+
+FuncDeclInput
+    = {
+    ($InputPair)+
+    #FDInput}
+InputPair
+    = {
+    TAB1 'ETH' NL
+    #ETH}
+    / {
+    TAB1 ${(!'指定された' C)* '指定された' C* #RAW} "(" '以下、' $Identifier 'と呼ぶ' ")" NL
+    #Pair}
+
+FuncDeclBody
+    = {
+    (TAB1 $Statement NL)+
+    #FDBody}
+
+
+/*-------------------------Statement-------------------------*/
+Statement
+    = IfStatement
+    / RequireStatement
+    / ReturnStatement
+    / Solidity
+    / Assign
+    / LocalVariableDecl
+    / Expression
+
+IfStatement
+    = {
+    'もし' SS $Condition SS 'ならば' NL
+    $Then
+    ($ElseIf)*
+    (
+    TAB1 'でなければ'
+    $Else
+    )?
+    TAB1 '終了'
+    #If}
+Condition
+    = {$LogicalExpr #Cond}
+Then
+    = {(TAB2 TAB* $Statement NL)+ #Then}
+ElseIf
+    = {
+    TAB1 TAB* 'ではなく、もし' SS $Condition SS 'ならば' NL
+    $Then
+    #ElIf}
+Else
+    = {(TAB2 TAB* $Statement NL)+ #Else}
+
+RequireStatement
+    = {
+    '要件' Digit? SS $Expression
+    #Require}
+
+ReturnStatement
+    = {
+    '当事者は' PostfixExpr ("・" SS PostfixExpr)* SS 'を' '出力として'? '知る'
+    #Return}
+    / {
+    (!'を完了' C)* 'を完了'
+    #ReturnTrue}
+
+Solidity
+    = 'SOL{' SolInner '}'
+SolInner
+    = {(!'}' !EOL .)* #Sol}
+
+Assign
+    = {$AssignLeft 'は' $AssignRight ('とする')? #Assign}
+    / {$AssignLeft 'を' $AssignRight 'とする' #Assign}
+AssignLeft
+    = Tuple
+    / PostfixExpr
+AssignRight
+    = Tuple
+    / Expression
+
+//Only used in Assign
+Tuple
+    = {"(" $PrimaryExpr ("," $PrimaryExpr)+ ")" #Tuple}
+
+LocalVariableDecl
+    = {
+    $Expression 'として'
+    $(PairDecl / Identifier)
+    'を定義する'
+    #LVDeclAssign}
+    / {
+    $(PairDecl / Identifier)
+    'を定義する'
+    #LVDecl}
+
+PairDecl
+    = {
+    ${C* #RAW} "(" '以下、' $Identifier 'と呼ぶ' ")"
+    #Pair}
+
+/*-------------------------Expression-------------------------*/
+Expression
+    = FunctionExpression
+    / EventExpression
+    / InnerFunction
+    / Solidity
+    / LogicalExpr
+
+/*-------------------------FunctionExpr-------------------------*/
+FunctionExpression
+    = {
+    (('契約' ${(!'より、' C)* #RAW} 'より、') / ('本契約より'))
+    ($FuncExprParam ("・" $FuncExprParam)* 'に対し')?
+    $FuncExprName ('を行う' / 'を行った結果')
+    #FExpr}
+
+FuncExprParam
+    = {$PostfixExpr #FEParam}
+FuncExprName
+    = {(!'の記録を行う' !'を行う' !'を行なった結果' C)+ #FEName}
+
+
+EventExpression
+    = {
+    ('本契約より、')?
+    ($EventExprParam ("・" $EventExprParam)* 'に対し')?
+    $EventExprName 'を行う'
+    #EExpr}
+
+EventExprParam
+    = {$PostfixExpr #EEParam}
+EventExprName
+    = {(!'を行う' C)+ #EEName}
+
+
+InnerFunction
+    = {'本契約のアドレスが持つETHから、' PostfixExpr 'を' PostfixExpr 'へ送金する' #EthTransfer}
+    / {PostfixExpr 'を' PostfixExpr 'だけ増やす' #IncFunc}
+    / {PostfixExpr 'を' PostfixExpr 'だけ減らす' #DecFunc}
+    / {PostfixExpr 'に' PostfixExpr 'を追加する' #PushFunc}
+    / {PostfixExpr 'が存在する' #AddrExistFunc}
+
+/*-------------------------LogicalExpr-------------------------*/
+LogicalExpr
+    = {$EqualityExpr (SS $({'かつ' #AND}/{'または' #OR}) SS $EqualityExpr)* #Logical}
+
+EqualityExpr
+    = {$RelationalExpr (SS $({"=" #EQ}/{"NOT=" #NEQ}) SS $RelationalExpr)* #Equality}
+
+RelationalExpr
+    = {$AddSubExpr (SS $CMPR SS $AddSubExpr)* #Relational}
+CMPR
+    = {">="#GTE}
+    / {"<="#LTE}
+    / {">"#GT}
+    / {"<"#LT}
+
+AddSubExpr
+    = {$MulDivExpModExpr (SS $({"+" #ADD}/{"-" #SUB}) SS $MulDivExpModExpr)* #AddSub}
+MulDivExpModExpr
+    = {$ReservedExpr (SS $({"*" #MUL}/{"/" #DIV}/{"**" #EXP}/{"%" #MOD}) SS $ReservedExpr)* #MulDivExpMod}
+
+/*-------------------------PostfixExpr-------------------------*/
+ReservedExpr
+    = {PostfixExpr 'の長さ' #Leng}
+    / PostfixExpr
+
+PostfixExpr
+    = StructRef
+    / ArrayRef
+    / MapRef
+    / PrimaryExpr
+
+StructRef
+    = {$StructComponent ('の' $StructComponent)+ #StructRef}
+StructComponent
+    = ArrayRef
+    / MapRef
+    / Identifier
+
+ArrayRef
+    = {$ArrayComponent ('の' $Index '番目')+ #ArrayRef}
+ArrayComponent
+    = MapRef
+    / Identifier
+Index
+    = {$(Num / Identifier) #Index}
+
+PrimaryExpr
+    = Address
+    / Num
+    / Boolean
+    / String
+    / Identifier
+
+Num
+    = {Digit #Int}
+Digit
+    = [1-9] [0-9]*
+    / ([0] ![0-9])
+
+Address
+    = {'0x'
+    [0-9] [0-9] [0-9] [0-9] [0-9] [0-9] [0-9] [0-9] [0-9] [0-9]
+    [0-9] [0-9] [0-9] [0-9] [0-9] [0-9] [0-9] [0-9] [0-9] [0-9]
+    [0-9] [0-9] [0-9] [0-9] [0-9] [0-9] [0-9] [0-9] [0-9] [0-9]
+    [0-9] [0-9] [0-9] [0-9] [0-9] [0-9] [0-9] [0-9] [0-9] [0-9]
+    #Addr}
+    / {'0x0' ![0-9] #Addr}
+
+Boolean
+    = {'はい' #BT}
+    / {'いいえ' #BF}
+    / {'true' #BT}
+    / {'false' #BF}
+
+String
+    = {'「' (!'「' !'」' C)+ '」' #String}
+    / {'"' (!'"' C)+ '"' #String}
+
+Identifier
+    = {FromDict #Id}
+

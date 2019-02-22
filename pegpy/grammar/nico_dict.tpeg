@@ -1,0 +1,102 @@
+Source
+    = MainPart {
+    '第' [0-9]+ '条' _ '型録' _
+    (StructDefine / WordDefine)*
+    #Input
+    } EOF
+
+MainPart     = (!('第' [0-9]+ '条' _ '型録') .)*
+
+_            = ( S / BLOCKCOMMENT / LINECOMMENT )*
+__           = ( S / BLOCKCOMMENT / LINECOMMENT )+
+S            = [ \t\n\r] / '　'
+BLOCKCOMMENT = '/*' ( !'*/' . )* '*/'
+             / '(*' ( !'*)' . )* '*)'
+LINECOMMENT  = '//' ( !EOL . )* EOL
+EOF          = !.
+EOL          = ('\r'? '\n') / EOF
+
+"#" = '#' / '＃'
+":" = ':' / '：'
+"," = ',' / '、'
+"(" = '(' / '（'
+")" = ')' / '）'
+" " = ' ' / '　'
+"->" = '->' / 'ー＞' / '→'
+"「" = '「'
+"」" = '」'
+
+C
+    = HIRA
+    / KATA
+    / KANJI
+    / MARK
+    / Alphabet
+    / [a-zA-Z0-9]
+
+Any
+    = [a-zA-Z0-9]
+
+HIRA = [ぁ-ん]
+KATA = [ァ-ヶ]
+KANJI = [㐀-䶵一-龠々〇〻]
+MARK = [ー◯×〜]
+Alphabet = [ａ-ｚＡ-Ｚ０-９]
+
+
+StructDefine
+    = {
+    $StructName 'は以下からなる' _
+    (_ $WordDefine)+ _
+    #StructDef
+    }
+StructName
+    = {(!'は以下からなる' C)+ #SName}
+
+WordDefine
+    = {"「" $MapWord "」" 'を' $MapType '型'? 'とする' #Dict} _
+    / {"「" $Word "」" 'を' $Type '型'? 'とする' #Dict} _
+
+MapWord
+    = {(!"」" C)+ #MW}
+Word
+    = {(!"」" C)+ #W}
+
+Type
+    = ArrayType
+    / EnumType
+    / PrimitiveType
+    / StructType
+
+MapType
+    = {$PrimitiveType (_ "," _ $PrimitiveType)* _ "->" _ $MapRetType #Map}
+
+MapRetType
+    = ArrayType
+    / PrimitiveType
+    / StructType
+
+ArrayType
+    = {$BaseType '型'? ($List)+ #Array}
+EnumType
+    = {
+    '{' _ EnumNode (_ '/' _ EnumNode)* _ '}'
+    #Enum}
+EnumNode
+    = {(!'}' !'/' C)+ #EN}
+BaseType
+    = PrimitiveType
+    / StructType
+List
+    = {'のリスト' #B}
+
+PrimitiveType
+    = {'uint' #T}
+    / {'int' #T}
+    / {'bool' #T}
+    / {'address' #T}
+    / {'string' #T}
+
+StructType
+    = {(!":" !'のリスト' !'{' !"->" C)+ #ST}
+

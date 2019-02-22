@@ -1,0 +1,29 @@
+Input
+    = LeftRight
+
+LeftRight
+    = Left (^ {'の' 'R' #LR})*
+Left
+    = {'L' #Id}
+
+/*
+LeftRight
+    = LeftRight 'の' 'R'
+    / 'L'
+*/
+
+DoubleMapRef
+    = SingleMapRef (^{'が' SingleMapRef 'から動かせる金額' #Map1})+
+    / SingleMapRef (^{'から' SingleMapRef 'が送金可能な金額' #Map2})+
+    / SingleMapRef 'のトークンに対して' SingleMapRef 'が操作可能かどうか' #Map8}
+
+SingleMapRef
+    = PrimaryExpr (^{'の投票者情報' #Map0})+
+    / PrimaryExpr 'の残高' #Map3}
+    / PrimaryExpr 'の数字表' #Map4}
+    / PrimaryExpr 'の所有者' #Map5}
+    / PrimaryExpr 'の操作可能者' #Map6}
+    / PrimaryExpr 'の持つトークン数' #Map7}
+
+PrimaryExpr
+    = {'ほげ' #ID}
