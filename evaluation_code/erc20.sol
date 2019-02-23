@@ -69,7 +69,7 @@ contract c_00450052004300320030306b57fa3065304f4eee60f3901a8ca8306b95a23059308b5
     @param v_900191d18005 送金の実行権の保有者として指定された人物
     @param v_8a3153ef984d 送金者が送金可能とする指定された仮想通貨量
     */
-    event Approve(address v_900191d15143, address v_900191d18005, uint256 v_8a3153ef984d);
+    event Approval(address v_900191d15143, address v_900191d18005, uint256 v_8a3153ef984d);
 
     /*
     @function totalSupply 総発行量の確認
@@ -123,7 +123,7 @@ contract c_00450052004300320030306b57fa3065304f4eee60f3901a8ca8306b95a23059308b5
     function approve(address v_900191d18005, uint256 v_8a3153ef984d) public returns(bool){
         require(v_900191d18005 != address(0));
         map1[msg.sender][v_900191d18005] = v_8a3153ef984d;
-        emit Approve(msg.sender, v_900191d18005, v_8a3153ef984d);
+        emit Approval(msg.sender, v_900191d18005, v_8a3153ef984d);
         return true;
     }
 
