@@ -43,11 +43,12 @@ def main():
         print("usage: python3 main.py <contract>.nc\n")
         sys.exit()
     nc_path = argv[1]
-    sol_path = './'+nc_path[nc_path.rfind('/')+1:-3]+'.sol'
+    sol_path = nc_path[:-3]+'.sol'
     transpile(nc_path, sol_path)
 
 if __name__ == "__main__":
-    main()
+    # main()
+    pass
 
 # Future Work: Combine Nico with Solidity Compiler
 def command(cmd):

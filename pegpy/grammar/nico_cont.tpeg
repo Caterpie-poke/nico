@@ -18,7 +18,7 @@ EOL          = ('\r'? '\n') / EOF
 
 TypeDef = '第' [0-9]+ '条' _ '型録' .*
 
-SS = (" ")*
+SS = (" " / ",")*
 TAB = '    ' / [\t] / '　　　　'
 TAB1 = TAB
 TAB2 = TAB TAB
@@ -47,6 +47,8 @@ NL = ((" ")* EOL)+
 ">=" = '>=' / '＞＝'
 "<=" = '<=' / '＜＝'
 "NOT=" = 'NOT=' / 'NOT＝'
+"AND" = 'および' / '及び' / 'ならびに' / '並びに' / 'かつ'
+"OR" = 'または' / '又は' / 'もしくは' / '若しくは'
 
 C
     = HIRA
@@ -123,15 +125,18 @@ FunctionDecl
     (TAB1 $SolLine NL)*
     #SolBlock}
     / {
-    Article _ $EventDeclName NL
-    ($EventDeclInput)?
-    TAB1 '以上を' ((!'として台帳に記録する' C)* 'として')? '台帳に記録する' NL
-    #EDecl}
-    / {
     Article _ $FuncDeclName NL
     ($FuncDeclInput)?
     ($FuncDeclBody)?
     #FDecl}
+
+/*
+    / {
+    Article _ $EventDeclName NL
+    ($EventDeclInput)?
+    TAB1 '以上を' ((!'として台帳に記録する' C)* 'として')? '台帳に記録する' NL
+    #EDecl}
+*/
 
 Article
     = '第' [0-9]+ '条' ([0-9]+ '項')?
@@ -204,7 +209,7 @@ Then
     = {(TAB2 TAB* $Statement NL)+ #Then}
 ElseIf
     = {
-    TAB1 TAB* 'ではなく、もし' SS $Condition SS 'ならば' NL
+    TAB1 TAB* 'ではなく' SS 'もし' SS $Condition SS 'ならば' NL
     $Then
     #ElIf}
 Else
@@ -212,25 +217,24 @@ Else
 
 RequireStatement
     = {
-    '要件' Digit? SS $Expression
+    '要件' SS $Expression
     #Require}
 
 ReturnStatement
     = {
-    '当事者は' PostfixExpr ("・" SS PostfixExpr)* SS 'を' '出力として'? '知る'
+    '当事者は' SS PostfixExpr (SS "AND" SS PostfixExpr)* SS 'を知る'
     #Return}
     / {
-    (!'を完了' C)* 'を完了'
+    '当事者は条項履行の完了を知る'
     #ReturnTrue}
 
 Solidity
-    = 'SOL{' SolInner '}'
+    = 'eval{' SolInner '}'
 SolInner
     = {(!'}' !EOL .)* #Sol}
 
 Assign
-    = {$AssignLeft 'は' $AssignRight ('とする')? #Assign}
-    / {$AssignLeft 'を' $AssignRight 'とする' #Assign}
+    = {$AssignLeft ('は'/'を') $AssignRight 'とする' #Assign}
 AssignLeft
     = Tuple
     / PostfixExpr
@@ -269,40 +273,43 @@ Expression
 /*-------------------------FunctionExpr-------------------------*/
 FunctionExpression
     = {
-    (('契約' ${(!'より、' C)* #RAW} 'より、') / ('本契約より'))
-    ($FuncExprParam ("・" $FuncExprParam)* 'に対し')?
-    $FuncExprName ('を行う' / 'を行った結果')
+    (('契約' ${(!('より' SS) C)* #RAW} 'より' SS) / ('本契約より' SS))
+    ($FuncExprParam ("AND" $FuncExprParam)* 'に対し' SS)?
+    $FuncExprName ('を適用する' / 'を適用した結果')
     #FExpr}
 
 FuncExprParam
     = {$PostfixExpr #FEParam}
 FuncExprName
-    = {(!'の記録を行う' !'を行う' !'を行なった結果' C)+ #FEName}
+    = {(!'の記録を行う' !'を適用する' !'を適用した結果' C)+ #FEName}
 
 
 EventExpression
     = {
-    ('本契約より、')?
-    ($EventExprParam ("・" $EventExprParam)* 'に対し')?
-    $EventExprName 'を行う'
+    '本契約より' SS
+    ($EventExprParam ("AND" $EventExprParam)* 'に対し' SS)?
+    $EventExprName 'を適用する'
     #EExpr}
 
 EventExprParam
     = {$PostfixExpr #EEParam}
 EventExprName
-    = {(!'を行う' C)+ #EEName}
+    = {(!'を適用する' C)+ #EEName}
 
 
 InnerFunction
-    = {'本契約のアドレスが持つETHから、' PostfixExpr 'を' PostfixExpr 'へ送金する' #EthTransfer}
+    = {'本契約から' PostfixExpr 'へ' Num SS Ether 'を送金する' #EthTransfer}
     / {PostfixExpr 'を' PostfixExpr 'だけ増やす' #IncFunc}
     / {PostfixExpr 'を' PostfixExpr 'だけ減らす' #DecFunc}
     / {PostfixExpr 'に' PostfixExpr 'を追加する' #PushFunc}
     / {PostfixExpr 'が存在する' #AddrExistFunc}
 
+Ether
+    = {('ether' / 'finney' / 'szabo' / 'wei') #Ether}
+
 /*-------------------------LogicalExpr-------------------------*/
 LogicalExpr
-    = {$EqualityExpr (SS $({'かつ' #AND}/{'または' #OR}) SS $EqualityExpr)* #Logical}
+    = {$EqualityExpr (SS $({"AND" #AND}/{"OR" #OR}) SS $EqualityExpr)* #Logical}
 
 EqualityExpr
     = {$RelationalExpr (SS $({"=" #EQ}/{"NOT=" #NEQ}) SS $RelationalExpr)* #Equality}
@@ -316,9 +323,11 @@ CMPR
     / {"<"#LT}
 
 AddSubExpr
-    = {$MulDivExpModExpr (SS $({"+" #ADD}/{"-" #SUB}) SS $MulDivExpModExpr)* #AddSub}
-MulDivExpModExpr
-    = {$ReservedExpr (SS $({"*" #MUL}/{"/" #DIV}/{"**" #EXP}/{"%" #MOD}) SS $ReservedExpr)* #MulDivExpMod}
+    = {$MulDivExpr (SS $({"+" #ADD}/{"-" #SUB}) SS $MulDivExpr)* #AddSub}
+MulDivExpr
+    = {$ExpModExpr (SS $({"*" #MUL}/{"/" #DIV}) SS $ExpModExpr)* #MulDiv}
+ExpModExpr
+    = {$ReservedExpr (SS $({"**" #EXP}/{"%" #MOD}) SS $ExpModExpr)? #ExpMod}
 
 /*-------------------------PostfixExpr-------------------------*/
 ReservedExpr

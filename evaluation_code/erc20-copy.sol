@@ -41,6 +41,7 @@ library SafeMath {
 contract c_00450052004300320030306b57fa3065304f4eee60f3901a8ca8306b95a23059308b59517d04 {
     using SafeMath for uint256;
 
+    string internal v_4eee60f3901a8ca8540d;    /*仮想通貨の名称*/
     uint256 internal v_7dcf767a884c91cf;    /*仮想通貨の総発行量*/
     mapping(address=>uint256) internal map0;    /*人物Xの仮想通貨保有量*/
     mapping(address=>mapping(address=>uint256)) internal map1;    /*人物Xが人物Yに許可した送金可能な仮想通貨量*/
@@ -48,11 +49,27 @@ contract c_00450052004300320030306b57fa3065304f4eee60f3901a8ca8306b95a23059308b5
     /*
     @function constructor 新規発行
     @param v_63075b9a5024 仮想通貨の総発行量として指定された値
+    @param v_63075b9a540d79f0 仮想通貨の名称として指定された文字列
     */
-    constructor(uint256 v_63075b9a5024) public {
-        v_7dcf767a884c91cf = v_63075b9a5024.mul(uint256(10).exp(uint256(18)));
+    constructor(uint256 v_63075b9a5024, string memory v_63075b9a540d79f0) public {
+        v_7dcf767a884c91cf = v_63075b9a5024.mul(uint256(10)).exp(uint256(18));
+        v_4eee60f3901a8ca8540d = v_63075b9a540d79f0;
         map0[msg.sender] = v_7dcf767a884c91cf;
     }
+    /*
+    @event Transfer 送金の記録
+    @param v_900191d15143 送金元として指定された人物
+    @param v_900191d15148 送金先として指定された人物
+    @param v_900191d1984d 指定された仮想通貨量
+    */
+    event Transfer(address v_900191d15143, address v_900191d15148, uint256 v_900191d1984d);
+    /*
+    @event Approve 第三者による送金の許可の記録
+    @param v_900191d15143 送金者が送金可能な仮想通貨の保有者として指定された人物
+    @param v_900191d18005 送金の実行権の保有者として指定された人物
+    @param v_8a3153ef984d 送金者が送金可能とする指定された仮想通貨量
+    */
+    event Approval(address v_900191d15143, address v_900191d18005, uint256 v_8a3153ef984d);
 
     /*
     @function totalSupply 総発行量の確認
@@ -87,13 +104,14 @@ contract c_00450052004300320030306b57fa3065304f4eee60f3901a8ca8306b95a23059308b5
     /*
     @function transfer 送金
     @param v_900191d15148 送金先として指定された人物
-    @param v_900191d1984d 送金額として指定された仮想通貨量
+    @param v_900191d1984d 指定された仮想通貨量
     */
     function transfer(address v_900191d15148, uint256 v_900191d1984d) public returns(bool){
         require(v_900191d15148 != address(0));
         require(map0[msg.sender] >= v_900191d1984d);
         map0[msg.sender] = map0[msg.sender].sub(v_900191d1984d);
         map0[v_900191d15148] = map0[v_900191d15148].add(v_900191d1984d);
+        emit Transfer(msg.sender, v_900191d15148, v_900191d1984d);
         return true;
     }
 
@@ -105,6 +123,7 @@ contract c_00450052004300320030306b57fa3065304f4eee60f3901a8ca8306b95a23059308b5
     function approve(address v_900191d18005, uint256 v_8a3153ef984d) public returns(bool){
         require(v_900191d18005 != address(0));
         map1[msg.sender][v_900191d18005] = v_8a3153ef984d;
+        emit Approval(msg.sender, v_900191d18005, v_8a3153ef984d);
         return true;
     }
 
@@ -122,6 +141,7 @@ contract c_00450052004300320030306b57fa3065304f4eee60f3901a8ca8306b95a23059308b5
         map0[v_88ab900191d18005] = map0[v_88ab900191d18005].sub(v_900191d1984d);
         map1[v_88ab900191d18005][msg.sender] = map1[v_88ab900191d18005][msg.sender].sub(v_900191d1984d);
         map0[v_900191d15148] = map0[v_900191d15148].add(v_900191d1984d);
+        emit Transfer(v_88ab900191d18005, v_900191d15148, v_900191d1984d);
         return true;
     }
 }

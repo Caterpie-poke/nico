@@ -188,7 +188,6 @@ def EDInput(ast):
     return code[2:]
 
 
-
 def FDecl(ast):
     code = ''
     codes = {
@@ -420,10 +419,21 @@ def AddrExistFunc(ast):
     return addr + ' != address(0)'
 
 def EthTransfer(ast):
+    (target,tag) = getNode(ast)
+    ast.next()
     (amount,tag) = getNode(ast)
     ast.next()
-    (target,tag) = getNode(ast)
-    return 'address('+target+').transfer(uint256('+amount+'))'
+    (unit,tag) = getNode(ast)
+    return 'address('+target+').transfer(uint256('+amount+' '+unit+'))'
+
+def Ether(ast):
+    w = ''
+    ast.requireNext('\'')
+    while(ast.current()!='\''):
+        w+=ast.current()
+        ast.next()
+    ast.next()
+    return w
 
 def If(ast):
     code = ''
@@ -676,7 +686,7 @@ def SUB(ast):
     ast.next()
     return '.sub('
 
-def MulDivExpMod(ast):
+def MulDiv(ast):
     code = ''
     (left,tag) = getNode(ast)
     code += left
@@ -702,6 +712,19 @@ def DIV(ast):
         ast.next()
     ast.next()
     return '.div('
+
+def ExpMod(ast):
+    code = ''
+    (left,tag) = getNode(ast)
+    code += left
+    if(ast.current()==' '):
+        ast.next()
+        (op,tag) = getNode(ast)
+        code += op
+        ast.next()
+        (right,tag) = getNode(ast)
+        code += right+')'
+    return code
 
 def MOD(ast):
     ast.requireNext('\'')
