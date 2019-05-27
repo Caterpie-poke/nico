@@ -36,10 +36,54 @@ library SafeMath {
         }
         return c;
     }
+    function mul(int256 a, int256 b) internal pure returns (int256) {
+        if (a == 0) {
+            return 0;
+        }
+        int256 c = a * b;
+        require(c / a == b, 'Mul Err');
+        return c;
+    }
+    function div(int256 a, int256 b) internal pure returns (int256) {
+        require(b != 0, 'Div Err');
+        int256 c = a / b;
+        return c;
+    }
+    function sub(int256 a, int256 b) internal pure returns (int256) {
+        int c = a - b;
+        if(b >= 0){
+            require(c <= a, 'Sub Err');
+        } else {
+            require(c > a, 'Sub Err');
+        }
+        return c;
+    }
+    function add(int256 a, int256 b) internal pure returns (int256) {
+        int c = a + b;
+        if(b >= 0){
+            require(c >= a, 'Sub Err');
+        } else {
+            require(c < a, 'Sub Err');
+        }
+        return c;
+    }
+    function mod(int256 a, int256 b) internal pure returns (int256) {
+        require(b != 0, 'Mod Err');
+        return a % b;
+    }
+    function exp(int256 a, int256 b) internal pure returns(int256){
+        require(b >= 0, 'Exp Err');
+        int256 c = 1;
+        for(int256 i = 0 ; i < b ; i++){
+            c = mul(c, a);
+        }
+        return c;
+    }
 }
 
 contract c_00450052004300320030306b57fa3065304f4eee60f3901a8ca8306b95a23059308b59517d04 {
     using SafeMath for uint256;
+    using SafeMath for int256;
 
     uint256 internal v_7dcf767a884c91cf;    /*仮想通貨の総発行量*/
     mapping(address=>uint256) internal map0;    /*人物Xの仮想通貨保有量*/

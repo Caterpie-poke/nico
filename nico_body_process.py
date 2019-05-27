@@ -20,6 +20,7 @@ def Input(ast):
     code += 'contract ' + title + ' {\n'
     ast.incIndent()
     code += ast.Indent() + 'using SafeMath for uint256;\n'
+    code += ast.Indent() + 'using SafeMath for int256;\n'
     for k in ast.struct:
         code += ast.Indent() + ast.structDefWrite(k) + '\n'
     code += '\n'

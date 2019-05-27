@@ -33,8 +33,15 @@ def transpile(src_path, sol_path):
             f2.write(base_tpeg + ext_tpeg)
     main_tree = parse(merge_tpeg, src_path)
     sol_code = makeSOL(ast, main_tree)
-    with open(sol_path, mode='w', encoding='utf-8') as f3:
-        f3.write(sol_code)
+    i = 1
+    while(True):
+        try:
+            with open(sol_path, mode='x', encoding='utf-8') as f3:
+                f3.write(sol_code)
+                break
+        except FileExistsError:
+            sol_path = sol_path[:(-4)]+'-copy.sol'
+            i+=1
 
 def main():
     argv = sys.argv
@@ -47,8 +54,8 @@ def main():
     transpile(nc_path, sol_path)
 
 if __name__ == "__main__":
-    # main()
-    pass
+    main()
+    # pass
 
 # Future Work: Combine Nico with Solidity Compiler
 def command(cmd):

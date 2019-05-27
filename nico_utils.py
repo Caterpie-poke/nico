@@ -37,6 +37,49 @@ library SafeMath {\n\
         }\n\
         return c;\n\
     }\n\
+    function mul(int256 a, int256 b) internal pure returns (int256) {\n\
+        if (a == 0) {\n\
+            return 0;\n\
+        }\n\
+        int256 c = a * b;\n\
+        require(c / a == b, \'Mul Err\');\n\
+        return c;\n\
+    }\n\
+    function div(int256 a, int256 b) internal pure returns (int256) {\n\
+        require(b != 0, \'Div Err\');\n\
+        int256 c = a / b;\n\
+        return c;\n\
+    }\n\
+    function sub(int256 a, int256 b) internal pure returns (int256) {\n\
+        int c = a - b;\n\
+        if(b >= 0){\n\
+            require(c <= a, \'Sub Err\');\n\
+        } else {\n\
+            require(c > a, \'Sub Err\');\n\
+        }\n\
+        return c;\n\
+    }\n\
+    function add(int256 a, int256 b) internal pure returns (int256) {\n\
+        int c = a + b;\n\
+        if(b >= 0){\n\
+            require(c >= a, \'Sub Err\');\n\
+        } else {\n\
+            require(c < a, \'Sub Err\');\n\
+        }\n\
+        return c;\n\
+    }\n\
+    function mod(int256 a, int256 b) internal pure returns (int256) {\n\
+        require(b != 0, \'Mod Err\');\n\
+        return a % b;\n\
+    }\n\
+    function exp(int256 a, int256 b) internal pure returns(int256){\n\
+        require(b >= 0, \'Exp Err\');\n\
+        int256 c = 1;\n\
+        for(int256 i = 0 ; i < b ; i++){\n\
+            c = mul(c, a);\n\
+        }\n\
+        return c;\n\
+    }\n\
 }\n\n'
 
 def mapTrim(word):
