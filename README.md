@@ -7,10 +7,10 @@ Nico source code is transcompiled to Solidity source code.
 
 # Example
 ```
-$ python3 main.py evaluation_code/erc20.nc
+$ python3 main.py test_code/erc20.nc
 ```
 
-With above command, you can get ./erc20.sol
+With above command, you can get ./test_code/erc20.sol
 
 Please compile that with Solidity Compiler.
 
